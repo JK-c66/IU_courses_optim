@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Schedule Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Course Schedule Viewer</h1>
+        </header>
+
+        <div class="input-section">
+            <div class="input-methods">
+                <div class="text-input">
+                    <h2>Paste JSON</h2>
+                    <textarea id="jsonInput" placeholder="Paste your JSON data here..."></textarea>
+                    <button id="parseTextBtn">Parse Data</button>
+                </div>
+                
+                <div class="file-drop">
+                    <h2>Upload JSON File</h2>
+                    <div id="dropZone" class="drop-zone">
+                        <p>Drop your JSON file here</p>
+                        <p>or</p>
+                        <label for="fileInput" class="file-button">Choose File</label>
+                        <p class="file-name" id="fileName">No file chosen</p>
+                        <input type="file" id="fileInput" accept=".json">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="searchInput" placeholder="Search courses...">
+            <select id="filterSelect">
+                <option value="all">All Courses</option>
+                <option value="open">Open Sections</option>
+                <option value="closed">Closed Sections</option>
+            </select>
+        </div>
+
+        <div id="courseDisplay" class="course-display">
+            <!-- Courses will be displayed here -->
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
