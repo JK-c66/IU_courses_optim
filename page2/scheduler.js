@@ -1522,8 +1522,70 @@ function renderScheduleWithOptions(result) {
     }
 
     scheduleResultEl.innerHTML = `
-        <h2 id="scheduleTableTop">Your Schedule Results</h2>
-        <div class="optimization-message"></div>
+        <div class="schedule-header" style="
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            animation: slideDown 0.3s ease-out;
+        ">
+            <div style="
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                margin-bottom: 20px;
+            ">
+                <div style="
+                    background: var(--accent-color);
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                ">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="width: 24px; height: 24px;">
+                        <path d="M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zM16 2v4M8 2v4M3 10h18"></path>
+                    </svg>
+                </div>
+                <h2 id="scheduleTableTop" style="
+                    margin: 0;
+                    color: var(--text-color);
+                    font-size: 1.8em;
+                    font-weight: 600;
+                ">Your Schedule Results</h2>
+            </div>
+            <div class="optimization-message" style="
+                background: var(--bg-color);
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: var(--text-color);
+                font-size: 1.1em;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                border: 1px solid var(--border-color);
+            ">
+                <div style="
+                    background: var(--accent-color);
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                ">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="width: 20px; height: 20px;">
+                        <path d="M20 6L9 17l-5-5"></path>
+                    </svg>
+                </div>
+                <span>${message}</span>
+            </div>
+        </div>
         ${removalAnalysisHTML}
         <div class="schedule-navigation"></div>
         ${schedules.length === 0 ? generateConflictExplanation() : `
