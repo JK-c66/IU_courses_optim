@@ -7,6 +7,7 @@ const courseDisplay = document.getElementById('courseDisplay');
 const searchInput = document.getElementById('searchInput');
 const filterSelect = document.getElementById('filterSelect');
 const fileName = document.getElementById('fileName');
+const goToSchedulerBtn = document.getElementById('goToScheduler');
 
 // Day mapping
 const dayNames = {
@@ -59,25 +60,26 @@ fileInput.addEventListener('change', (e) => {
 searchInput.addEventListener('input', filterAndDisplayCourses);
 filterSelect.addEventListener('change', filterAndDisplayCourses);
 
+goToSchedulerBtn.addEventListener('click', () => {
+    window.location.href = '../page2/scheduler.html';
+});
+
 // File handling
 function updateFileName(name) {
     fileName.textContent = name;
 }
 
 function handleFileUpload(file) {
-    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
-        alert('Please upload a JSON file');
-        updateFileName('No file chosen');
-        return;
-    }
-
     const reader = new FileReader();
-    reader.onload = (e) => {
-        processJsonInput(e.target.result);
-    };
-    reader.onerror = () => {
-        alert('Error reading file');
-        updateFileName('No file chosen');
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            coursesData = data;
+            filterAndDisplayCourses();
+        } catch (error) {
+            console.error('Error parsing file:', error);
+            alert('Invalid file format. Please ensure it is a valid JSON file.');
+        }
     };
     reader.readAsText(file);
 }
@@ -86,14 +88,11 @@ function handleFileUpload(file) {
 function processJsonInput(jsonText) {
     try {
         const data = JSON.parse(jsonText);
-        if (Array.isArray(data)) {
-            coursesData = data;
-            filterAndDisplayCourses();
-        } else {
-            throw new Error('JSON must be an array of courses');
-        }
+        coursesData = data;
+        filterAndDisplayCourses();
     } catch (error) {
-        alert('Error parsing JSON: ' + error.message);
+        console.error('Error parsing JSON:', error);
+        alert('Invalid JSON format. Please check your input.');
     }
 }
 
