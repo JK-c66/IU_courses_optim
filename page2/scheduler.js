@@ -1321,14 +1321,210 @@ function generateConflictExplanation() {
     return html;
 }
 
-// Update renderScheduleWithOptions to show conflicts when no schedules are found
+// Add new function to analyze course removal impact
+function analyzeRemovalImpact() {
+    // Get current maximum days off with all courses
+    const currentSchedules = generateCombinations(groupCoursesByType(coursesData.filter(section => 
+        selectedCourses.has(section.section_course)
+    )));
+    
+    const currentResult = findSchedulesWithMostDaysOff(currentSchedules);
+    const currentMaxDaysOff = currentResult.schedules.length > 0 ? 
+        calculateDaysOff(currentResult.schedules[0]) : 0;
+
+    // Analyze impact of removing each course
+    const removalImpact = [];
+    for (const course of selectedCourses) {
+        // Generate schedules without this course
+        const remainingCourses = new Set(selectedCourses);
+        remainingCourses.delete(course);
+        
+        const schedulesWithoutCourse = generateCombinations(groupCoursesByType(coursesData.filter(section => 
+            remainingCourses.has(section.section_course)
+        )));
+        
+        const resultWithoutCourse = findSchedulesWithMostDaysOff(schedulesWithoutCourse);
+        const maxDaysOffWithoutCourse = resultWithoutCourse.schedules.length > 0 ? 
+            calculateDaysOff(resultWithoutCourse.schedules[0]) : 0;
+        
+        // Calculate which days would be freed
+        const freedDays = resultWithoutCourse.schedules.length > 0 ? 
+            findFreedDays(currentResult.schedules[0], resultWithoutCourse.schedules[0]) : [];
+        
+        removalImpact.push({
+            course,
+            currentDaysOff: currentMaxDaysOff,
+            newDaysOff: maxDaysOffWithoutCourse,
+            daysGained: maxDaysOffWithoutCourse - currentMaxDaysOff,
+            freedDays
+        });
+    }
+    
+    return removalImpact.sort((a, b) => b.daysGained - a.daysGained);
+}
+
+// Helper function to calculate days off for a schedule
+function calculateDaysOff(schedule) {
+    const usedDays = new Set();
+    schedule.forEach(section => {
+        const slots = parseTimeSlots(section.section_times);
+        slots.forEach(slot => usedDays.add(slot.day));
+    });
+    return 5 - usedDays.size;
+}
+
+// Helper function to find which days would be freed
+function findFreedDays(currentSchedule, newSchedule) {
+    const currentDays = new Set();
+    const newDays = new Set();
+    
+    currentSchedule.forEach(section => {
+        const slots = parseTimeSlots(section.section_times);
+        slots.forEach(slot => currentDays.add(slot.day));
+    });
+    
+    newSchedule.forEach(section => {
+        const slots = parseTimeSlots(section.section_times);
+        slots.forEach(slot => newDays.add(slot.day));
+    });
+    
+    return Array.from(currentDays)
+        .filter(day => !newDays.has(day))
+        .sort();
+}
+
+// Helper function to group courses by type
+function groupCoursesByType(sections) {
+    const courseGroups = {};
+    for (const section of sections) {
+        if (!courseGroups[section.section_course]) {
+            courseGroups[section.section_course] = {
+                lectures: [],
+                labs: []
+            };
+        }
+        if (section.section_type === 'عملي') {
+            courseGroups[section.section_course].labs.push(section);
+        } else {
+            courseGroups[section.section_course].lectures.push(section);
+        }
+    }
+    return courseGroups;
+}
+
+// Update renderScheduleWithOptions to show removal impact analysis
 function renderScheduleWithOptions(result) {
     console.log('Rendering schedule options:', result);
     const { schedules, message } = result;
     
+    // Generate removal impact analysis if we have selected courses
+    let removalAnalysisHTML = '';
+    if (selectedCourses.size > 0) {
+        const removalImpact = analyzeRemovalImpact();
+        
+        removalAnalysisHTML = `
+            <div class="removal-impact-analysis" style="
+                max-width: 1200px;
+                margin: 20px auto;
+                padding: 20px;
+                background: var(--bg-secondary);
+                border-radius: 12px;
+                direction: rtl;
+            ">
+                <h3 style="
+                    color: var(--text-color);
+                    margin-bottom: 20px;
+                    text-align: right;
+                ">تحليل تأثير حذف المواد</h3>
+                <div class="impact-cards" style="
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                    gap: 15px;
+                ">
+                    ${removalImpact.map(impact => {
+                        const courseColor = generateCourseColor(impact.course);
+                        const daysMap = {
+                            1: 'الأحد',
+                            2: 'الإثنين',
+                            3: 'الثلاثاء',
+                            4: 'الأربعاء',
+                            5: 'الخميس'
+                        };
+                        
+                        return `
+                            <div class="impact-card" style="
+                                background: var(--bg-color);
+                                border-radius: 8px;
+                                padding: 15px;
+                                border: 1px solid var(--border-color);
+                            ">
+                                <div style="
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                    margin-bottom: 10px;
+                                ">
+                                    <span style="
+                                        background: ${courseColor};
+                                        padding: 8px 16px;
+                                        border-radius: 8px;
+                                        color: white;
+                                        font-weight: bold;
+                                    ">${impact.course}</span>
+                                    ${impact.daysGained > 0 ? `
+                                        <span style="
+                                            background: var(--bg-secondary);
+                                            padding: 4px 12px;
+                                            border-radius: 12px;
+                                            color: var(--text-color);
+                                        ">+${impact.daysGained} يوم</span>
+                                    ` : ''}
+                                </div>
+                                ${impact.daysGained > 0 ? `
+                                    <div style="
+                                        margin-top: 10px;
+                                        color: var(--text-color);
+                                    ">
+                                        <div style="margin-bottom: 8px;">الأيام التي ستتحرر:</div>
+                                        <div style="
+                                            display: flex;
+                                            gap: 8px;
+                                            flex-wrap: wrap;
+                                        ">
+                                            ${impact.freedDays.map(day => `
+                                                <span style="
+                                                    background: ${courseColor}33;
+                                                    padding: 4px 12px;
+                                                    border-radius: 15px;
+                                                    font-size: 0.9em;
+                                                ">${daysMap[day]}</span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : `
+                                    <div style="
+                                        color: var(--text-color);
+                                        text-align: center;
+                                        padding: 10px;
+                                        background: var(--bg-secondary);
+                                        border-radius: 8px;
+                                        margin-top: 10px;
+                                    ">
+                                        حذف هذه المادة لن يزيد عدد الأيام الحرة
+                                    </div>
+                                `}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
     scheduleResultEl.innerHTML = `
         <h2 id="scheduleTableTop">Your Schedule Results</h2>
         <div class="optimization-message"></div>
+        ${removalAnalysisHTML}
         <div class="schedule-navigation"></div>
         ${schedules.length === 0 ? generateConflictExplanation() : `
             <div class="room-toggle" style="margin: 15px 0; text-align: right;">
