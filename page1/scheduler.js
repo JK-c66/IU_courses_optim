@@ -21,8 +21,6 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const fileName = document.getElementById('fileName');
 const goToViewerBtn = document.getElementById('goToViewer');
-const fileInfo = document.querySelector('.file-info');
-const removeFileBtn = document.querySelector('.remove-file');
 
 goToViewerBtn.addEventListener('click', () => {
     window.location.href = '../page1/index.html';
@@ -40,9 +38,7 @@ function validateDOMElements() {
         dropZone: dropZone,
         fileInput: fileInput,
         fileName: fileName,
-        goToViewer: goToViewerBtn,
-        fileInfo: fileInfo,
-        removeFileBtn: removeFileBtn
+        goToViewer: goToViewerBtn
     };
 
     for (const [name, element] of Object.entries(elements)) {
@@ -90,27 +86,11 @@ function setupInputHandlers() {
             handleFileUpload(file);
         }
     });
-
-    // Remove file button handling
-    if (removeFileBtn) {
-        removeFileBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            resetFileInput();
-        });
-    }
 }
 
 function resetFileInput() {
     fileInput.value = '';
     fileName.textContent = 'No file chosen';
-    if (fileInfo) {
-        fileInfo.style.display = 'none';
-    }
-    const dropZoneContent = dropZone.querySelector('.drop-zone-content');
-    if (dropZoneContent) {
-        dropZoneContent.style.display = 'flex';
-    }
 }
 
 function handleFileUpload(file) {
@@ -122,16 +102,7 @@ function handleFileUpload(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         processInputData(e.target.result);
-        
-        // Update UI to show selected file
         fileName.textContent = file.name;
-        if (fileInfo) {
-            fileInfo.style.display = 'flex';
-        }
-        const dropZoneContent = dropZone.querySelector('.drop-zone-content');
-        if (dropZoneContent) {
-            dropZoneContent.style.display = 'none';
-        }
     };
     reader.readAsText(file);
 }
@@ -215,12 +186,9 @@ function initializeScheduler() {
         setupEventListeners();
         setupInputHandlers();
         
-        // Add default styles to schedule container
+        // Clear any existing content in scheduleResultEl
         if (scheduleResultEl) {
-            scheduleResultEl.style.cssText = 'display: block; margin: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 8px;';
-        }
-        if (scheduleResultEl) {
-            scheduleResultEl.style.cssText = 'width: 100%; overflow-x: auto;';
+            scheduleResultEl.innerHTML = '';
         }
     } catch (error) {
         console.error('Error initializing scheduler:', error);
@@ -289,6 +257,15 @@ function setupEventListeners() {
         const courseItem = e.target.closest('.course-item');
         if (!courseItem) return;
 
+        // Check if course is closed and toggle is off
+        const isClosed = courseItem.querySelector('.closed-indicator');
+        const isClosedEnabled = document.getElementById('closedSectionsToggle')?.checked ?? true;
+        
+        if (isClosed && !isClosedEnabled) {
+            // Don't allow selection of closed courses when toggle is off
+            return;
+        }
+
         const courseName = courseItem.dataset.course;
         if (selectedCourses.has(courseName)) {
             selectedCourses.delete(courseName);
@@ -322,7 +299,7 @@ function setupEventListeners() {
         });
     });
 
-    // Add closed sections toggle
+    // Update closed sections toggle
     const closedSectionsToggle = document.getElementById('closedSectionsToggle');
     if (closedSectionsToggle) {
         closedSectionsToggle.addEventListener('change', (e) => {
@@ -336,6 +313,11 @@ function setupEventListeners() {
                 );
                 if (hasClosed) {
                     item.classList.toggle('has-closed', includeClosedSections);
+                    // If toggle is turned off and this course was selected, deselect it
+                    if (!includeClosedSections && selectedCourses.has(courseName)) {
+                        selectedCourses.delete(courseName);
+                        item.classList.remove('selected');
+                    }
                 }
             });
         });
@@ -419,9 +401,9 @@ function showDoctorPreferences() {
                 لا يوجد خيارات متعددة للمحاضرين في المواد المختارة
             </div>
         `;
-    } else {
+    } else {    
         doctorPreferencesEl.innerHTML = `
-            <h2>3. اختر المحاضرين المفضلين</h2>
+            <h2>3. choose the preferred doctors</h2>
             ${doctorOptions.join('')}
         `;
     }
@@ -729,7 +711,7 @@ function findBestSchedule(combinations, optimizationType) {
     if (combinations.length === 0) {
         return { 
             schedules: [], 
-            message: 'No valid schedules found that meet all requirements' 
+            message: 'لم يتم العثور على جداول تلبي المتطلبات' 
         };
     }
     
@@ -741,13 +723,24 @@ function findBestSchedule(combinations, optimizationType) {
         case 'specific-doctors':
             return {
                 schedules: combinations,
-                message: `Found ${combinations.length} possible schedule(s) with specified doctors`
+                message: `تم العثور على ${combinations.length} جدول دراسي`
             };
         default:
             return {
                 schedules: [combinations[0]],
-                message: 'Found valid schedule'
+                message: 'تم العثور على جدول دراسي واحد'
             };
+    }
+}
+
+// Helper function to get the correct Arabic form for "day"
+function getArabicDayForm(number) {
+    if (number === 2) {
+        return 'يومين فراغ';
+    } else if (number === 1 || number === 0) {
+        return 'يوم فراغ';
+    } else {
+        return 'أيام فراغ';
     }
 }
 
@@ -794,13 +787,13 @@ function findSchedulesWithMostDaysOff(combinations) {
     if (bestSchedules.length === 0) {
         return {
             schedules: [],
-            message: 'No valid schedules found - there might be issues with the time format in the data'
+            message: 'لم يتم العثور على جداول صالحة - قد تكون هناك مشكلة في تنسيق البيانات'
         };
     }
     
     return {
         schedules: bestSchedules,
-        message: `Found ${bestSchedules.length} schedule(s) with ${maxDaysOff} day(s) off`
+        message: `<span dir="rtl">تم العثور على \u200E${bestSchedules.length}\u200F جدول دراسي مع \u200E${maxDaysOff}\u200F ${getArabicDayForm(maxDaysOff)}</span>`
     };
 }
 
@@ -818,7 +811,7 @@ function findSchedulesWithThursdayOff(combinations) {
 
     return {
         schedules: thursdayOffSchedules,
-        message: `Found ${thursdayOffSchedules.length} schedule(s) with Thursday off`
+        message: `<span dir="rtl">تم العثور على \u200E${thursdayOffSchedules.length}\u200F جدول دراسي مع يوم الخميس فارغ</span>`
     };
 }
 
@@ -895,7 +888,7 @@ function generateScheduleOverview(schedules) {
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
             text-align: right;
-        ">تحليل الجداول (${schedules.length} خيارات)</h3>
+        ">تحليل الجداول (${schedules.length} خيار)</h3>
     `;
     
     // Sort courses by number of variations
@@ -904,6 +897,12 @@ function generateScheduleOverview(schedules) {
     
     for (const [course, data] of sortedCourses) {
         const courseColor = generateCourseColor(course);
+        
+        // Skip courses with no variations
+        const hasVariations = data.variations.some(v => 
+            (v.scheduleIndices.length / schedules.length * 100) < 100
+        );
+        if (!hasVariations) continue;
         
         overviewHTML += `
             <div class="course-card" style="
@@ -1477,7 +1476,7 @@ function renderScheduleWithOptions(result) {
                     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
                     gap: 15px;
                 ">
-                    ${removalImpact.map(impact => {
+                    ${removalImpact.filter(impact => impact.daysGained > 0).map(impact => {
                         const courseColor = generateCourseColor(impact.course);
                         const daysMap = {
                             1: 'الأحد',
@@ -1914,11 +1913,11 @@ styleSheet.textContent = `
         margin-right: 8px;
         opacity: 0.7;
     }
-    .course-item.has-closed:not(.selected) {
-        opacity: 0.7;
-    }
-    .course-item.has-closed.selected {
-        opacity: 1;
+    .course-item:has(.closed-indicator):not(.has-closed) {
+        opacity: 0.5;
+        pointer-events: none;
+        cursor: not-allowed;
+        position: relative;
     }
 `;
 document.head.appendChild(styleSheet); 
