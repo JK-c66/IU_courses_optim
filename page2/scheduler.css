@@ -278,30 +278,73 @@ button:hover, .file-button:hover {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
     direction: rtl;
     width: 100%;
-}
-
-.timetable table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #1e1e1e;
+    border-spacing: 0;
+    border-collapse: separate;
+    border: 1px solid var(--border-color);
 }
 
 .timetable th,
 .timetable td {
     padding: 15px;
-    text-align: right;
-    border: 1px solid #2c2c2c;
-    color: #e1e1e1;
-    min-width: 120px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    min-width: 150px;
+    position: relative;
 }
 
+/* Enhanced header styles */
 .timetable th {
-    background: #262b36;
+    background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-color) 100%);
     font-weight: 600;
-    color: #eaeaea;
+    color: var(--text-color);
     text-transform: none;
-    font-size: 0.95em;
-    letter-spacing: normal;
+    font-size: 1em;
+    letter-spacing: 0.5px;
+    padding: 20px 15px;
+    border-bottom: 2px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Time column styles */
+.timetable th:first-child,
+.timetable td:first-child {
+    background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--bg-color) 100%);
+    font-weight: 600;
+    border-right: 2px solid var(--border-color);
+    min-width: 120px;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Add subtle separators between columns */
+.timetable th:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: 20%;
+    height: 60%;
+    width: 1px;
+    background: var(--border-color);
+    opacity: 0.5;
+}
+
+/* Hover effects for better interaction */
+.timetable th:not(:first-child):hover {
+    background: var(--bg-secondary);
+    transition: background 0.3s ease;
+}
+
+/* Ensure proper spacing in RTL layout */
+.timetable[dir="rtl"] th,
+.timetable[dir="rtl"] td {
+    text-align: center;
+}
+
+.timetable tbody tr:first-child td {
+    border-top: none;
 }
 
 .timetable tr:nth-child(even) td {
