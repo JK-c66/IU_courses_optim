@@ -408,6 +408,21 @@ button:hover, .file-button:hover {
     margin-bottom: 0.3rem;
     font-size: 0.85rem;
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px 8px;
+    border-radius: 6px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.course-block small:first-of-type {
+    display: inline-block;
+    margin-right: 4px;
+}
+
+.course-block .room-number {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
 }
 
 /* Hide type display for both lab and lecture sections since we show it as a badge */

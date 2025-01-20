@@ -354,6 +354,8 @@ function parseTimeSlots(timeString) {
     const slots = [];
     const parts = timeString.split('@n');
     
+    // First, collect all individual slots
+    const rawSlots = [];
     for (const part of parts) {
         // Extract all days (handling multiple days in one slot)
         const daysStr = part.split('@t')[0].trim();
@@ -379,13 +381,41 @@ function parseTimeSlots(timeString) {
         // Create a slot for each day
         for (const day of days) {
             if (day >= 1 && day <= 5) {
-                slots.push({
+                rawSlots.push({
                     day: day,
                     start: start,
                     end: end
                 });
             }
         }
+    }
+    
+    // Sort slots by day and start time
+    rawSlots.sort((a, b) => {
+        if (a.day !== b.day) return a.day - b.day;
+        return a.start - b.start;
+    });
+    
+    // Merge consecutive slots
+    let currentSlot = null;
+    for (const slot of rawSlots) {
+        if (!currentSlot) {
+            currentSlot = {...slot};
+            continue;
+        }
+        
+        // If same day and either consecutive or overlapping times
+        if (currentSlot.day === slot.day && 
+            (slot.start <= currentSlot.end + 10 || // Allow 10 minutes gap
+             (slot.start >= currentSlot.start && slot.end <= currentSlot.end))) { // Overlapping
+            currentSlot.end = Math.max(currentSlot.end, slot.end);
+        } else {
+            slots.push(currentSlot);
+            currentSlot = {...slot};
+        }
+    }
+    if (currentSlot) {
+        slots.push(currentSlot);
     }
     
     return slots;
@@ -579,7 +609,16 @@ function findSchedulesWithThursdayOff(combinations) {
     };
 }
 
-// Generate overview of all schedule differences
+// Helper function to format time for display
+function formatTimeForDisplay(minutes, period = null) {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    const displayHours = hours > 12 ? hours - 12 : hours;
+    const periodText = period || (hours >= 12 ? 'م' : 'ص');
+    return `${displayHours}:${String(mins).padStart(2, '0')} ${periodText}`;
+}
+
+// Update generateScheduleOverview to use the new time formatting
 function generateScheduleOverview(schedules) {
     // Track variations for each course
     const courseVariations = new Map();
@@ -706,13 +745,8 @@ function generateScheduleOverview(schedules) {
                             const slots = parseTimeSlots(variation.times);
                             const timeBlocks = slots.map(slot => {
                                 const days = ['', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
-                                const startHour = Math.floor(slot.start/60);
-                                const startMin = String(slot.start%60).padStart(2,'0');
-                                const endHour = Math.floor(slot.end/60);
-                                const endMin = String(slot.end%60).padStart(2,'0');
-                                const period = startHour >= 12 ? 'م' : 'ص';
-                                const displayStartHour = startHour > 12 ? startHour - 12 : startHour;
-                                const displayEndHour = endHour > 12 ? endHour - 12 : endHour;
+                                const startTime = formatTimeForDisplay(slot.start);
+                                const endTime = formatTimeForDisplay(slot.end);
                                 
                                 return `
                                     <div class="time-block" style="
@@ -732,7 +766,7 @@ function generateScheduleOverview(schedules) {
                                             border-radius: 12px;
                                             font-size: 0.9em;
                                         ">
-                                            ${displayStartHour}:${startMin} - ${displayEndHour}:${endMin} ${period}
+                                            ${startTime} - ${endTime}
                                         </span>
                                     </div>
                                 `;
