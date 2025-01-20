@@ -20,6 +20,8 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const fileName = document.getElementById('fileName');
 const goToViewerBtn = document.getElementById('goToViewer');
+const fileInfo = document.querySelector('.file-info');
+const removeFileBtn = document.querySelector('.remove-file');
 
 goToViewerBtn.addEventListener('click', () => {
     window.location.href = '../page1/index.html';
@@ -37,7 +39,9 @@ function validateDOMElements() {
         dropZone: dropZone,
         fileInput: fileInput,
         fileName: fileName,
-        goToViewer: goToViewerBtn
+        goToViewer: goToViewerBtn,
+        fileInfo: fileInfo,
+        removeFileBtn: removeFileBtn
     };
 
     for (const [name, element] of Object.entries(elements)) {
@@ -82,10 +86,30 @@ function setupInputHandlers() {
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            fileName.textContent = file.name;
             handleFileUpload(file);
         }
     });
+
+    // Remove file button handling
+    if (removeFileBtn) {
+        removeFileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            resetFileInput();
+        });
+    }
+}
+
+function resetFileInput() {
+    fileInput.value = '';
+    fileName.textContent = 'No file chosen';
+    if (fileInfo) {
+        fileInfo.style.display = 'none';
+    }
+    const dropZoneContent = dropZone.querySelector('.drop-zone-content');
+    if (dropZoneContent) {
+        dropZoneContent.style.display = 'flex';
+    }
 }
 
 function handleFileUpload(file) {
@@ -97,6 +121,16 @@ function handleFileUpload(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         processInputData(e.target.result);
+        
+        // Update UI to show selected file
+        fileName.textContent = file.name;
+        if (fileInfo) {
+            fileInfo.style.display = 'flex';
+        }
+        const dropZoneContent = dropZone.querySelector('.drop-zone-content');
+        if (dropZoneContent) {
+            dropZoneContent.style.display = 'none';
+        }
     };
     reader.readAsText(file);
 }
