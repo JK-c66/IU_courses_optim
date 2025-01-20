@@ -741,108 +741,193 @@ function generateScheduleOverview(schedules) {
                         gap: 15px;
                         margin-top: 15px;
                     ">
-                        ${data.variations.map((variation, index) => {
-                            const slots = parseTimeSlots(variation.times);
-                            const timeBlocks = slots.map(slot => {
-                                const days = ['', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
-                                const startTime = formatTimeForDisplay(slot.start);
-                                const endTime = formatTimeForDisplay(slot.end);
+                        ${data.variations
+                            .map((variation, index) => {
+                                const scheduleCount = variation.scheduleIndices.length;
+                                const schedulePercentage = (scheduleCount / schedules.length * 100).toFixed(0);
+                                
+                                // Skip 100% variations
+                                if (schedulePercentage >= 100) return '';
+                                
+                                const slots = parseTimeSlots(variation.times);
+                                const timeBlocks = slots.map(slot => {
+                                    const days = ['', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+                                    const startTime = formatTimeForDisplay(slot.start);
+                                    const endTime = formatTimeForDisplay(slot.end);
+                                    
+                                    return `
+                                        <div class="time-block" style="
+                                            background: ${courseColor}CC;
+                                            border-right: 3px solid ${courseColor};
+                                            padding: 8px 12px;
+                                            margin: 4px 0;
+                                            border-radius: 6px;
+                                            display: flex;
+                                            justify-content: space-between;
+                                            align-items: center;
+                                        ">
+                                            <span style="font-weight: bold;">${days[slot.day]}</span>
+                                            <span style="
+                                                background: ${courseColor}E6;
+                                                padding: 2px 8px;
+                                                border-radius: 12px;
+                                                font-size: 0.9em;
+                                            ">
+                                                ${startTime} - ${endTime}
+                                            </span>
+                                        </div>
+                                    `;
+                                }).join('');
+
+                                // Calculate the actual option number (excluding 100% options)
+                                const visibleOptions = data.variations.filter(v => 
+                                    (v.scheduleIndices.length / schedules.length * 100) < 100
+                                );
+                                const optionNumber = visibleOptions.indexOf(variation) + 1;
                                 
                                 return `
-                                    <div class="time-block" style="
-                                        background: ${courseColor}22;
-                                        border-right: 3px solid ${courseColor};
-                                        padding: 8px 12px;
-                                        margin: 4px 0;
-                                        border-radius: 6px;
-                                        display: flex;
-                                        justify-content: space-between;
-                                        align-items: center;
+                                    <div class="variation-card" style="
+                                        background: var(--bg-color);
+                                        border-radius: 8px;
+                                        padding: 12px;
+                                        position: relative;
                                     ">
-                                        <span style="font-weight: bold;">${days[slot.day]}</span>
-                                        <span style="
-                                            background: ${courseColor}33;
-                                            padding: 2px 8px;
-                                            border-radius: 12px;
-                                            font-size: 0.9em;
+                                        <div class="variation-header" style="
+                                            display: flex;
+                                            justify-content: space-between;
+                                            align-items: center;
+                                            margin-bottom: 8px;
                                         ">
-                                            ${startTime} - ${endTime}
-                                        </span>
+                                            <span style="font-weight: bold; color: var(--text-color);">خيار ${optionNumber}</span>
+                                            <span style="
+                                                background: ${courseColor};
+                                                padding: 2px 8px;
+                                                border-radius: 10px;
+                                                font-size: 0.8em;
+                                                color: white;
+                                            ">${schedulePercentage}% من الجداول</span>
+                                        </div>
+                                        <div style="color: var(--text-color); font-size: 0.9em;">
+                                            <div style="margin-bottom: 8px;">${variation.instructor}</div>
+                                            <div class="time-blocks" style="margin: 10px 0;">
+                                                ${timeBlocks}
+                                            </div>
+                                        </div>
+                                        <div style="
+                                            font-size: 0.8em;
+                                            color: var(--text-color);
+                                            margin-top: 12px;
+                                            text-align: right;
+                                        ">
+                                            <div style="margin-bottom: 6px; opacity: 0.7;">متوفر في الجداول:</div>
+                                            <div class="schedule-numbers" style="
+                                                display: grid;
+                                                grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+                                                gap: 6px;
+                                                direction: rtl;
+                                                justify-content: flex-start;
+                                            ">
+                                                ${(() => {
+                                                    // Group consecutive numbers
+                                                    const groups = [];
+                                                    let currentGroup = [];
+                                                    variation.scheduleIndices.forEach((index, i) => {
+                                                        if (i === 0 || index !== variation.scheduleIndices[i-1] + 1) {
+                                                            if (currentGroup.length > 0) groups.push(currentGroup);
+                                                            currentGroup = [index];
+                                                        } else {
+                                                            currentGroup.push(index);
+                                                        }
+                                                    });
+                                                    if (currentGroup.length > 0) groups.push(currentGroup);
+
+                                                    return groups.map(group => {
+                                                        if (group.length === 1) {
+                                                            return `
+                                                                <div class="schedule-number" 
+                                                                    onclick="currentScheduleIndex=${group[0]-1}; renderScheduleWithOptions(currentResult); document.getElementById('scheduleTableTop').scrollIntoView({behavior: 'smooth'});"
+                                                                    style="
+                                                                        background: ${courseColor}CC;
+                                                                        color: white;
+                                                                        padding: 8px;
+                                                                        border-radius: 50px;
+                                                                        border: 2px solid ${courseColor};
+                                                                        font-size: 0.9em;
+                                                                        cursor: pointer;
+                                                                        transition: all 0.2s ease;
+                                                                        display: flex;
+                                                                        align-items: center;
+                                                                        justify-content: center;
+                                                                        min-width: 40px;
+                                                                        min-height: 40px;
+                                                                        direction: ltr;
+                                                                        position: relative;
+                                                                        overflow: hidden;
+                                                                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                                                    "
+                                                                    onmouseover="this.style.background='${courseColor}F2'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+                                                                    onmouseout="this.style.background='${courseColor}CC'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'"
+                                                                >${group[0]}</div>
+                                                            `;
+                                                        } else {
+                                                            return `
+                                                                <div class="schedule-number-range" 
+                                                                    style="
+                                                                        grid-column: span ${Math.min(3, group.length)};
+                                                                        background: ${courseColor}CC;
+                                                                        color: white;
+                                                                        padding: 8px 16px;
+                                                                        border-radius: 50px;
+                                                                        border: 2px solid ${courseColor};
+                                                                        font-size: 0.9em;
+                                                                        display: flex;
+                                                                        align-items: center;
+                                                                        justify-content: center;
+                                                                        gap: 8px;
+                                                                        direction: ltr;
+                                                                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                                                        transition: all 0.2s ease;
+                                                                    "
+                                                                    onmouseover="this.style.background='${courseColor}F2'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+                                                                    onmouseout="this.style.background='${courseColor}CC'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'"
+                                                                >
+                                                                    <span onclick="currentScheduleIndex=${group[0]-1}; renderScheduleWithOptions(currentResult); document.getElementById('scheduleTableTop').scrollIntoView({behavior: 'smooth'});"
+                                                                        style="
+                                                                            cursor: pointer;
+                                                                            background: ${courseColor}E6;
+                                                                            color: white;
+                                                                            padding: 4px 12px;
+                                                                            border-radius: 50px;
+                                                                            transition: all 0.2s ease;
+                                                                        "
+                                                                        onmouseover="this.style.background='${courseColor}'"
+                                                                        onmouseout="this.style.background='${courseColor}E6'"
+                                                                    >${group[0]}</span>
+                                                                    <span style="color: white;">-</span>
+                                                                    <span onclick="currentScheduleIndex=${group[group.length-1]-1}; renderScheduleWithOptions(currentResult); document.getElementById('scheduleTableTop').scrollIntoView({behavior: 'smooth'});"
+                                                                        style="
+                                                                            cursor: pointer;
+                                                                            background: ${courseColor}E6;
+                                                                            color: white;
+                                                                            padding: 4px 12px;
+                                                                            border-radius: 50px;
+                                                                            transition: all 0.2s ease;
+                                                                        "
+                                                                        onmouseover="this.style.background='${courseColor}'"
+                                                                        onmouseout="this.style.background='${courseColor}E6'"
+                                                                    >${group[group.length-1]}</span>
+                                                                </div>
+                                                            `;
+                                                        }
+                                                    }).join('');
+                                                })()}
+                                            </div>
+                                        </div>
                                     </div>
                                 `;
-                            }).join('');
-                            
-                            const scheduleCount = variation.scheduleIndices.length;
-                            const schedulePercentage = (scheduleCount / schedules.length * 100).toFixed(0);
-                            
-                            return `
-                                <div class="variation-card" style="
-                                    background: var(--bg-color);
-                                    border-radius: 8px;
-                                    padding: 12px;
-                                    position: relative;
-                                ">
-                                    <div class="variation-header" style="
-                                        display: flex;
-                                        justify-content: space-between;
-                                        align-items: center;
-                                        margin-bottom: 8px;
-                                    ">
-                                        <span style="font-weight: bold; color: var(--text-color);">خيار ${index + 1}</span>
-                                        <span style="
-                                            background: ${courseColor};
-                                            padding: 2px 8px;
-                                            border-radius: 10px;
-                                            font-size: 0.8em;
-                                            color: white;
-                                        ">${schedulePercentage}% من الجداول</span>
-                                    </div>
-                                    <div style="color: var(--text-color); font-size: 0.9em;">
-                                        <div style="margin-bottom: 8px;">${variation.instructor}</div>
-                                        <div class="time-blocks" style="margin: 10px 0;">
-                                            ${timeBlocks}
-                                        </div>
-                                    </div>
-                                    <div style="
-                                        font-size: 0.8em;
-                                        color: var(--text-color);
-                                        margin-top: 12px;
-                                        text-align: right;
-                                    ">
-                                        <div style="margin-bottom: 6px; opacity: 0.7;">متوفر في الجداول:</div>
-                                        <div style="
-                                            display: flex;
-                                            flex-wrap: wrap;
-                                            gap: 6px;
-                                            direction: rtl;
-                                            justify-content: flex-start;
-                                        ">
-                                            ${variation.scheduleIndices.map(index => `
-                                                <span style="
-                                                    background: ${courseColor}22;
-                                                    color: var(--text-color);
-                                                    padding: 3px 8px;
-                                                    border-radius: 12px;
-                                                    border: 1px solid ${courseColor}44;
-                                                    font-size: 0.9em;
-                                                    transition: all 0.2s ease;
-                                                    cursor: pointer;
-                                                    display: inline-flex;
-                                                    min-width: 24px;
-                                                    align-items: center;
-                                                    justify-content: center;
-                                                    direction: ltr;
-                                                " 
-                                                onmouseover="this.style.background='${courseColor}44'"
-                                                onmouseout="this.style.background='${courseColor}22'"
-                                                onclick="currentScheduleIndex=${index-1}; renderScheduleWithOptions(currentResult);"
-                                                >${index}</span>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
+                            })
+                            .filter(Boolean) // Remove empty strings from skipped variations
+                            .join('')}
                     </div>
                 </div>
             </div>
@@ -859,7 +944,7 @@ function renderScheduleWithOptions(result) {
     const { schedules, message } = result;
     
     scheduleResultEl.innerHTML = `
-        <h2>Your Schedule Results</h2>
+        <h2 id="scheduleTableTop">Your Schedule Results</h2>
         <div class="optimization-message"></div>
         <div class="schedule-navigation"></div>
         <div class="room-toggle" style="margin: 15px 0; text-align: right;">
