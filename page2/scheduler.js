@@ -772,11 +772,39 @@ function generateScheduleOverview(schedules) {
                                     <div style="
                                         font-size: 0.8em;
                                         color: var(--text-color);
-                                        opacity: 0.7;
-                                        margin-top: 8px;
-                                        text-align: left;
+                                        margin-top: 12px;
+                                        text-align: right;
                                     ">
-                                        الجداول: ${variation.scheduleIndices.join(', ')}
+                                        <div style="margin-bottom: 6px; opacity: 0.7;">متوفر في الجداول:</div>
+                                        <div style="
+                                            display: flex;
+                                            flex-wrap: wrap;
+                                            gap: 6px;
+                                            direction: rtl;
+                                            justify-content: flex-start;
+                                        ">
+                                            ${variation.scheduleIndices.map(index => `
+                                                <span style="
+                                                    background: ${courseColor}22;
+                                                    color: var(--text-color);
+                                                    padding: 3px 8px;
+                                                    border-radius: 12px;
+                                                    border: 1px solid ${courseColor}44;
+                                                    font-size: 0.9em;
+                                                    transition: all 0.2s ease;
+                                                    cursor: pointer;
+                                                    display: inline-flex;
+                                                    min-width: 24px;
+                                                    align-items: center;
+                                                    justify-content: center;
+                                                    direction: ltr;
+                                                " 
+                                                onmouseover="this.style.background='${courseColor}44'"
+                                                onmouseout="this.style.background='${courseColor}22'"
+                                                onclick="currentScheduleIndex=${index-1}; renderScheduleWithOptions(currentResult);"
+                                                >${index}</span>
+                                            `).join('')}
+                                        </div>
                                     </div>
                                 </div>
                             `;
@@ -799,8 +827,12 @@ function renderScheduleWithOptions(result) {
     scheduleResultEl.innerHTML = `
         <h2>Your Schedule Results</h2>
         <div class="optimization-message"></div>
-        <div class="schedule-overview-container"></div>
         <div class="schedule-navigation"></div>
+        <div class="room-toggle" style="margin: 15px 0; text-align: right;">
+            <button id="toggleRoomBtn" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                إظهار أرقام القاعات
+            </button>
+        </div>
         <div class="timetable" style="direction: rtl;">
             <table style="width: 100%;">
                 <thead>
@@ -818,6 +850,7 @@ function renderScheduleWithOptions(result) {
                 </tbody>
             </table>
         </div>
+        <div class="schedule-overview-container"></div>
     `;
     
     // Update the header
@@ -828,12 +861,18 @@ function renderScheduleWithOptions(result) {
     const messageDiv = scheduleResultEl.querySelector('.optimization-message');
     messageDiv.style.cssText = 'padding: 10px; margin: 15px 0; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color);';
     messageDiv.textContent = message;
-    
-    // Add schedule overview if there are multiple schedules
-    if (schedules.length > 1) {
-        const overviewDiv = scheduleResultEl.querySelector('.schedule-overview-container');
-        overviewDiv.innerHTML = generateScheduleOverview(schedules);
-    }
+
+    // Setup room toggle button
+    const toggleRoomBtn = scheduleResultEl.querySelector('#toggleRoomBtn');
+    let showRooms = false;
+    toggleRoomBtn.addEventListener('click', () => {
+        showRooms = !showRooms;
+        toggleRoomBtn.textContent = showRooms ? 'إخفاء أرقام القاعات' : 'إظهار أرقام القاعات';
+        const roomElements = document.querySelectorAll('.room-number');
+        roomElements.forEach(el => {
+            el.style.display = showRooms ? 'block' : 'none';
+        });
+    });
     
     // Update navigation if there are schedules
     const navControls = scheduleResultEl.querySelector('.schedule-navigation');
@@ -864,6 +903,12 @@ function renderScheduleWithOptions(result) {
         
         // Render the current schedule
         renderSchedule(schedules[currentScheduleIndex]);
+        
+        // Add schedule overview if there are multiple schedules
+        if (schedules.length > 1) {
+            const overviewDiv = scheduleResultEl.querySelector('.schedule-overview-container');
+            overviewDiv.innerHTML = generateScheduleOverview(schedules);
+        }
     } else {
         navControls.innerHTML = '';
         const scheduleBody = document.getElementById('scheduleBody');
@@ -993,7 +1038,7 @@ function renderSchedule(schedule) {
                             ">
                             <strong style="display: block; margin-bottom: 4px;">${course.section_course}</strong>
                             <small style="display: block;">${course.section_instructor}</small>
-                            <small style="display: block;">قاعة: ${room}</small>
+                            <small class="room-number" style="display: none;">قاعة: ${room}</small>
                         </div>
                     `;
                 });
