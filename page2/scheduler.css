@@ -1090,10 +1090,116 @@ nav a:hover {
     line-height: 1.6;
 }
 
+/* Schedule Count Message Styles */
 .optimization-message {
-    font-size: 1.1em;
-    text-align: center;
-    color: #495057;
+    background: linear-gradient(145deg, var(--bg-secondary), var(--bg-color)) !important;
+    padding: 25px !important;
+    border-radius: 16px !important;
+    margin: 20px 0 !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.3s ease !important;
+}
+
+.optimization-message:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2) !important;
+}
+
+.optimization-message::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, 
+        var(--accent-color) 0%,
+        rgba(var(--accent-rgb), 0.5) 50%,
+        var(--accent-color) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.optimization-message:hover::before {
+    opacity: 1;
+}
+
+.optimization-message span {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 15px !important;
+    font-size: 1.2em !important;
+    color: var(--text-color) !important;
+    text-align: center !important;
+    line-height: 1.5 !important;
+}
+
+/* Style for the numbers in the message */
+.optimization-message span strong {
+    font-size: 1.8em !important;
+    font-weight: 700 !important;
+    color: var(--accent-color) !important;
+    background: linear-gradient(135deg, var(--accent-color), #357abd) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    padding: 0 8px !important;
+    position: relative !important;
+    animation: numberPulse 2s infinite !important;
+}
+
+/* Add pulse animation for numbers */
+@keyframes numberPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Add shine effect */
+.optimization-message::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.03) 30%,
+        rgba(255, 255, 255, 0.05) 50%,
+        rgba(255, 255, 255, 0.03) 70%,
+        transparent 100%
+    );
+    transform: rotate(45deg);
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    0% { transform: translateX(-200%) rotate(45deg); }
+    100% { transform: translateX(200%) rotate(45deg); }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .optimization-message {
+        padding: 20px !important;
+        margin: 15px 0 !important;
+    }
+
+    .optimization-message span {
+        font-size: 1.1em !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    .optimization-message span strong {
+        font-size: 1.6em !important;
+    }
 }
 
 .no-schedule {
@@ -1425,4 +1531,293 @@ nav a:hover {
     border-color: var(--accent-color);
     background: var(--accent-color);
     box-shadow: 0 0 0 2px var(--bg-secondary), 0 0 0 4px var(--accent-color);
+}
+
+/* Room Toggle Button Styles */
+.room-toggle {
+    margin: 15px 0;
+    text-align: right;
+    direction: rtl;
+}
+
+.room-toggle button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    direction: rtl;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.room-toggle button::before {
+    content: '🏛️';
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.room-toggle button:hover {
+    background: var(--bg-color);
+    border-color: var(--accent-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.room-toggle button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 767px) {
+    .room-toggle button {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 20px;
+        font-size: 1rem;
+    }
+}
+
+/* Closed Sections Toggle Styles */
+.closed-sections-toggle {
+    margin: 20px 0 30px 0 !important;
+    padding: 20px !important;
+    background: linear-gradient(145deg, var(--bg-secondary), var(--bg-color)) !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.closed-sections-toggle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, 
+        var(--accent-color) 0%,
+        rgba(var(--accent-rgb), 0.5) 50%,
+        var(--accent-color) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.closed-sections-toggle:hover::before {
+    opacity: 1;
+}
+
+.toggle-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 15px !important;
+    cursor: pointer !important;
+    padding: 5px !important;
+    position: relative;
+}
+
+.toggle-container span {
+    font-size: 1.1em !important;
+    font-weight: 500 !important;
+    color: var(--text-color) !important;
+    flex-grow: 1;
+    position: relative;
+    padding-right: 35px;
+}
+
+.toggle-container span::before {
+    content: '🔒';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2em;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+/* Custom Switch Styles */
+.toggle-container input[type="checkbox"] {
+    position: relative !important;
+    width: 50px !important;
+    height: 26px !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background: var(--bg-color) !important;
+    border-radius: 20px !important;
+    border: 2px solid var(--border-color) !important;
+    transition: all 0.3s ease !important;
+    flex-shrink: 0 !important;
+}
+
+.toggle-container input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--border-color);
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Checked State */
+.toggle-container input[type="checkbox"]:checked {
+    background: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+}
+
+.toggle-container input[type="checkbox"]:checked::before {
+    background: white;
+    transform: translateX(24px);
+}
+
+/* Hover Effects */
+.toggle-container:hover input[type="checkbox"] {
+    border-color: var(--accent-color);
+}
+
+.toggle-container:hover input[type="checkbox"]::before {
+    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.3);
+}
+
+/* Focus State */
+.toggle-container input[type="checkbox"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.2);
+}
+
+/* Active Animation */
+.toggle-container input[type="checkbox"]:active::before {
+    width: 22px;
+}
+
+.toggle-container input[type="checkbox"]:checked:active::before {
+    transform: translateX(20px);
+}
+
+/* RTL Support */
+[dir="rtl"] .toggle-container {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .toggle-container input[type="checkbox"]::before {
+    left: auto;
+    right: 2px;
+}
+
+[dir="rtl"] .toggle-container input[type="checkbox"]:checked::before {
+    transform: translateX(-24px);
+}
+
+/* Hover state for the entire toggle container */
+.closed-sections-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Add pulse animation when toggled */
+@keyframes togglePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
+
+.closed-sections-toggle:active {
+    animation: togglePulse 0.3s ease;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+    .closed-sections-toggle {
+        margin: 15px 0 25px 0 !important;
+        padding: 15px !important;
+    }
+
+    .toggle-container span {
+        font-size: 1em !important;
+    }
+
+    .toggle-container input[type="checkbox"] {
+        width: 44px !important;
+        height: 24px !important;
+    }
+
+    .toggle-container input[type="checkbox"]::before {
+        width: 16px;
+        height: 16px;
+    }
+
+    .toggle-container input[type="checkbox"]:checked::before {
+        transform: translateX(20px);
+    }
+}
+
+/* Add styles for when toggle is disabled */
+.toggle-container input[type="checkbox"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toggle-container input[type="checkbox"]:disabled ~ span {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Add tooltip on hover */
+.toggle-container span::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 10px);
+    right: 0;
+    background: var(--bg-color);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    color: var(--text-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.toggle-container:hover span::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-5px);
+}
+
+/* Add styles for when there are closed sections available */
+.closed-sections-toggle.has-closed-sections {
+    border-color: var(--accent-color) !important;
+}
+
+.closed-sections-toggle.has-closed-sections::after {
+    content: 'يوجد شعب مغلقة متاحة';
+    position: absolute;
+    top: -10px;
+    right: 20px;
+    background: var(--accent-color);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    transform: translateY(-50%);
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.3);
 } 

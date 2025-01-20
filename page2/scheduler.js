@@ -5,6 +5,7 @@ let selectedDoctors = new Map(); // course -> selected doctor
 let currentScheduleIndex = 0; // Track which schedule is being displayed
 let currentResult = null; // Store current schedule result
 let courseColors = new Map();
+let includeClosedSections = true; // Changed to true by default
 
 // Add new conflict tracking functionality
 let scheduleConflicts = [];
@@ -179,6 +180,37 @@ function processInputData(jsonText) {
 function initializeScheduler() {
     try {
         validateDOMElements();
+        
+        // Add closed sections toggle to the page
+        const optimizationSection = document.querySelector('.optimization-preferences');
+        if (optimizationSection) {
+            const closedSectionsToggleHTML = `
+                <div class="closed-sections-toggle" style="
+                    margin: 20px 0;
+                    padding: 15px;
+                    background: var(--bg-secondary);
+                    border-radius: 8px;
+                    border: 1px solid var(--border-color);
+                ">
+                    <label class="toggle-container" style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 10px;
+                        cursor: pointer;
+                    ">
+                        <span style="color: var(--text-color);">تضمين الشعب المغلقة</span>
+                        <input type="checkbox" id="closedSectionsToggle" checked style="
+                            width: 20px;
+                            height: 20px;
+                            cursor: pointer;
+                        ">
+                    </label>
+                </div>
+            `;
+            optimizationSection.insertAdjacentHTML('afterbegin', closedSectionsToggleHTML);
+        }
+        
         // Setup all event listeners
         setupEventListeners();
         setupInputHandlers();
@@ -234,9 +266,17 @@ function renderAvailableCourses() {
                 section.section_course === course && 
                 section.section_type === 'عملي'
             );
+            const hasClosed = coursesData.some(section =>
+                section.section_course === course &&
+                section.section_availability === 'مغلقة'
+            );
             return `
-                <div class="course-item" data-course="${course}" style="--lab-display: ${hasLab ? 'inline-block' : 'none'}">
+                <div class="course-item ${hasClosed ? 'has-closed' : ''}" 
+                    data-course="${course}" 
+                    style="--lab-display: ${hasLab ? 'inline-block' : 'none'}"
+                >
                     <h3>${course}</h3>
+                    ${hasClosed ? '<span class="closed-indicator">مغلقة</span>' : ''}
                 </div>
             `;
         }).join('');
@@ -281,6 +321,25 @@ function setupEventListeners() {
             }
         });
     });
+
+    // Add closed sections toggle
+    const closedSectionsToggle = document.getElementById('closedSectionsToggle');
+    if (closedSectionsToggle) {
+        closedSectionsToggle.addEventListener('change', (e) => {
+            includeClosedSections = e.target.checked;
+            // Update UI to show/hide closed sections
+            document.querySelectorAll('.course-item').forEach(item => {
+                const courseName = item.dataset.course;
+                const hasClosed = coursesData.some(section => 
+                    section.section_course === courseName && 
+                    section.section_availability === 'مغلقة'
+                );
+                if (hasClosed) {
+                    item.classList.toggle('has-closed', includeClosedSections);
+                }
+            });
+        });
+    }
 
     // Optimize button
     optimizeBtn.addEventListener('click', generateSchedule);
@@ -425,9 +484,15 @@ function generateSchedule() {
     console.log('Selected courses:', Array.from(selectedCourses));
     console.log('Selected doctors:', Object.fromEntries(selectedDoctors));
     console.log('Optimization type:', optimizationType);
+    console.log('Include closed sections:', includeClosedSections);
 
     // Get all valid sections for selected courses
     const validSections = coursesData.filter(section => {
+        // First check if section is open or if we're including closed sections
+        if (!includeClosedSections && section.section_availability === 'مغلقة') {
+            return false;
+        }
+        
         if (!selectedCourses.has(section.section_course)) return false;
         if (selectedDoctors.has(section.section_course)) {
             const prefs = selectedDoctors.get(section.section_course);
@@ -1160,6 +1225,28 @@ function generateConflictExplanation() {
             </div>
     `;
 
+    // Check if any closed sections are involved in conflicts
+    const hasClosedSections = scheduleConflicts.some(conflict => 
+        conflict.course1.section_availability === 'مغلقة' || 
+        conflict.course2.section_availability === 'مغلقة'
+    );
+
+    if (hasClosedSections) {
+        html += `
+            <div style="
+                background: #ff9800;
+                color: white;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                text-align: center;
+                font-weight: bold;
+            ">
+                تنبيه: بعض الشعب المتعارضة مغلقة. يرجى التحقق من توفر الشعب قبل التسجيل.
+            </div>
+        `;
+    }
+
     // Sort conflicts by count
     const sortedConflicts = Array.from(analysis.details.entries())
         .sort((a, b) => b[1].count - a[1].count);
@@ -1168,6 +1255,10 @@ function generateConflictExplanation() {
         const [course1, course2] = details.courses;
         const color1 = generateCourseColor(course1.section_course);
         const color2 = generateCourseColor(course2.section_course);
+
+        // Add closed section indicators
+        const course1Closed = course1.section_availability === 'مغلقة';
+        const course2Closed = course2.section_availability === 'مغلقة';
 
         html += `
             <div class="conflict-card" style="
@@ -1198,7 +1289,22 @@ function generateConflictExplanation() {
                             border-radius: 8px;
                             color: white;
                             font-weight: bold;
-                        ">${course1.section_course}</span>
+                            position: relative;
+                        ">
+                            ${course1.section_course}
+                            ${course1Closed ? `
+                                <span style="
+                                    position: absolute;
+                                    top: -8px;
+                                    right: -8px;
+                                    background: #ff9800;
+                                    color: white;
+                                    padding: 2px 8px;
+                                    border-radius: 12px;
+                                    font-size: 0.8em;
+                                ">مغلقة</span>
+                            ` : ''}
+                        </span>
                         <span style="
                             color: var(--text-color);
                             white-space: nowrap;
@@ -1209,7 +1315,22 @@ function generateConflictExplanation() {
                             border-radius: 8px;
                             color: white;
                             font-weight: bold;
-                        ">${course2.section_course}</span>
+                            position: relative;
+                        ">
+                            ${course2.section_course}
+                            ${course2Closed ? `
+                                <span style="
+                                    position: absolute;
+                                    top: -8px;
+                                    right: -8px;
+                                    background: #ff9800;
+                                    color: white;
+                                    padding: 2px 8px;
+                                    border-radius: 12px;
+                                    font-size: 0.8em;
+                                ">مغلقة</span>
+                            ` : ''}
+                        </span>
                     </div>
                     <span style="
                         background: var(--bg-secondary);
@@ -1417,9 +1538,9 @@ function renderScheduleWithOptions(result) {
     console.log('Rendering schedule options:', result);
     const { schedules, message } = result;
     
-    // Generate removal impact analysis if we have selected courses
+    // Generate removal impact analysis if we have selected courses and valid schedules
     let removalAnalysisHTML = '';
-    if (selectedCourses.size > 0) {
+    if (selectedCourses.size > 0 && schedules.length > 0) {
         const removalImpact = analyzeRemovalImpact();
         
         removalAnalysisHTML = `
@@ -1586,14 +1707,14 @@ function renderScheduleWithOptions(result) {
                 <span>${message}</span>
             </div>
         </div>
-        ${removalAnalysisHTML}
-        <div class="schedule-navigation"></div>
         ${schedules.length === 0 ? generateConflictExplanation() : `
+            ${removalAnalysisHTML}
             <div class="room-toggle" style="margin: 15px 0; text-align: right;">
                 <button id="toggleRoomBtn" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
                     إظهار أرقام القاعات
                 </button>
             </div>
+            <div class="schedule-navigation"></div>
             <div class="timetable" style="direction: rtl;">
                 <table style="width: 100%;">
                     <thead>
@@ -1622,7 +1743,9 @@ function renderScheduleWithOptions(result) {
     // Update the message
     const messageDiv = scheduleResultEl.querySelector('.optimization-message');
     messageDiv.style.cssText = 'padding: 10px; margin: 15px 0; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color);';
-    messageDiv.textContent = message;
+    // Format message with strong tags around numbers
+    const formattedMessage = message.replace(/(\d+)/g, '<strong>$1</strong>');
+    messageDiv.innerHTML = `<span>${formattedMessage}</span>`;
 
     // Setup room toggle button
     const toggleRoomBtn = scheduleResultEl.querySelector('#toggleRoomBtn');
@@ -1861,4 +1984,26 @@ function generateCourseColor(courseName) {
     // Store the color for consistency
     courseColors.set(courseName, color);
     return color;
-} 
+}
+
+// Add styles for closed sections indicators
+const styleSheet = document.createElement('style');
+styleSheet.textContent = `
+    .course-item .closed-indicator {
+        display: inline-block;
+        background: var(--accent-color);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        margin-right: 8px;
+        opacity: 0.7;
+    }
+    .course-item.has-closed:not(.selected) {
+        opacity: 0.7;
+    }
+    .course-item.has-closed.selected {
+        opacity: 1;
+    }
+`;
+document.head.appendChild(styleSheet); 
