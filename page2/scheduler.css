@@ -523,4 +523,132 @@ nav a:hover {
 .data-confirmation p {
     margin: 0;
     color: #2e7d32;
+}
+
+/* Schedule Summary Styles */
+.schedule-summary-container {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+}
+
+.schedule-summary {
+    color: var(--text-color);
+}
+
+.schedule-summary h3 {
+    color: var(--text-color);
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+.schedule-summary ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.schedule-summary > ul {
+    margin-bottom: 15px;
+}
+
+.schedule-summary ul ul {
+    padding-left: 20px;
+    margin: 10px 0;
+}
+
+.schedule-summary li {
+    margin-bottom: 10px;
+    line-height: 1.5;
+    color: var(--text-secondary-color);
+}
+
+.schedule-summary ul ul li {
+    margin-bottom: 5px;
+    position: relative;
+}
+
+.schedule-summary ul ul li:before {
+    content: "•";
+    color: var(--accent-color);
+    position: absolute;
+    left: -15px;
+}
+
+/* Schedule Overview Styles */
+.schedule-overview-container {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+}
+
+.schedule-overview {
+    color: var(--text-color);
+}
+
+.schedule-overview h3 {
+    color: var(--text-color);
+    margin-bottom: 20px;
+    font-size: 1.3em;
+    text-align: center;
+}
+
+.course-variations {
+    background: var(--bg-color);
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+}
+
+.course-variations h4 {
+    color: var(--text-color);
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.variation-details {
+    padding: 10px;
+}
+
+.variation-details p {
+    margin: 5px 0;
+    color: var(--text-secondary-color);
+}
+
+.variation-details strong {
+    color: var(--text-color);
+}
+
+.variation-list {
+    margin-top: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.variation {
+    background: var(--bg-secondary);
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.variation p {
+    margin: 5px 0;
+    font-size: 0.9em;
+}
+
+.variation p:last-child {
+    margin-top: 10px;
+    color: var(--accent-color);
+    font-size: 0.85em;
 } 

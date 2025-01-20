@@ -579,61 +579,219 @@ function findSchedulesWithThursdayOff(combinations) {
     };
 }
 
-// Compare two schedules and return their differences
-function compareSchedules(schedule1, schedule2) {
-    const differences = [];
+// Generate overview of all schedule differences
+function generateScheduleOverview(schedules) {
+    // Track variations for each course
+    const courseVariations = new Map();
     
-    // Create maps of course to section for each schedule
-    const sections1 = new Map(schedule1.map(s => [s.section_course, s]));
-    const sections2 = new Map(schedule2.map(s => [s.section_course, s]));
+    // Initialize course variations tracking
+    schedules[0].forEach(section => {
+        courseVariations.set(section.section_course, {
+            instructors: new Set(),
+            timeSlots: new Set(),
+            days: new Set(),
+            variations: []
+        });
+    });
     
-    // Compare sections
-    for (const [course, section1] of sections1) {
-        const section2 = sections2.get(course);
-        if (section1.section_instructor !== section2.section_instructor) {
-            differences.push(`${course}: Different instructors (${section1.section_instructor} vs ${section2.section_instructor})`);
-        }
-        if (section1.section_times !== section2.section_times) {
-            differences.push(`${course}: Different times`);
-        }
+    // Analyze all schedules
+    schedules.forEach((schedule, scheduleIndex) => {
+        schedule.forEach(section => {
+            const course = section.section_course;
+            const variations = courseVariations.get(course);
+            
+            variations.instructors.add(section.section_instructor);
+            
+            const slots = parseTimeSlots(section.section_times);
+            slots.forEach(slot => {
+                variations.days.add(slot.day);
+                const timeStr = `${Math.floor(slot.start/60)}:${String(slot.start%60).padStart(2,'0')} - ${Math.floor(slot.end/60)}:${String(slot.end%60).padStart(2,'0')}`;
+                variations.timeSlots.add(`${['', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'][slot.day]} ${timeStr}`);
+            });
+            
+            const variationKey = JSON.stringify({
+                instructor: section.section_instructor,
+                times: section.section_times
+            });
+            if (!variations.variations.some(v => v.key === variationKey)) {
+                variations.variations.push({
+                    key: variationKey,
+                    instructor: section.section_instructor,
+                    times: section.section_times,
+                    scheduleIndices: [scheduleIndex + 1]
+                });
+            } else {
+                variations.variations.find(v => v.key === variationKey)
+                    .scheduleIndices.push(scheduleIndex + 1);
+            }
+        });
+    });
+    
+    // Generate modern card-based HTML for the overview
+    let overviewHTML = `
+        <div class="schedule-overview" style="
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+            direction: rtl;
+        ">
+        <h3 style="
+            color: var(--text-color);
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            text-align: right;
+        ">تحليل الجداول (${schedules.length} خيارات)</h3>
+    `;
+    
+    // Sort courses by number of variations
+    const sortedCourses = Array.from(courseVariations.entries())
+        .sort((a, b) => b[1].variations.length - a[1].variations.length);
+    
+    for (const [course, data] of sortedCourses) {
+        const courseColor = generateCourseColor(course);
+        
+        overviewHTML += `
+            <div class="course-card" style="
+                background: var(--bg-secondary);
+                border-radius: 12px;
+                margin-bottom: 20px;
+                overflow: hidden;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            ">
+                <div class="course-header" style="
+                    background: ${courseColor};
+                    padding: 15px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    color: white;
+                ">
+                    <h4 style="margin: 0; font-size: 1.2em;">${course}</h4>
+                    <span class="variation-count" style="
+                        background: rgba(255,255,255,0.2);
+                        padding: 4px 8px;
+                        border-radius: 12px;
+                        font-size: 0.9em;
+                    ">${data.variations.length} خيارات</span>
+                </div>
+                
+                <div class="course-content" style="padding: 15px;">
+                    <div class="instructor-list" style="
+                        margin-bottom: 10px;
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                    ">
+                        ${Array.from(data.instructors).map(instructor => `
+                            <span class="instructor-tag" style="
+                                background: var(--bg-color);
+                                padding: 4px 12px;
+                                border-radius: 15px;
+                                font-size: 0.9em;
+                                color: var(--text-color);
+                            ">${instructor}</span>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="variations-grid" style="
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                        gap: 15px;
+                        margin-top: 15px;
+                    ">
+                        ${data.variations.map((variation, index) => {
+                            const slots = parseTimeSlots(variation.times);
+                            const timeBlocks = slots.map(slot => {
+                                const days = ['', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+                                const startHour = Math.floor(slot.start/60);
+                                const startMin = String(slot.start%60).padStart(2,'0');
+                                const endHour = Math.floor(slot.end/60);
+                                const endMin = String(slot.end%60).padStart(2,'0');
+                                const period = startHour >= 12 ? 'م' : 'ص';
+                                const displayStartHour = startHour > 12 ? startHour - 12 : startHour;
+                                const displayEndHour = endHour > 12 ? endHour - 12 : endHour;
+                                
+                                return `
+                                    <div class="time-block" style="
+                                        background: ${courseColor}22;
+                                        border-right: 3px solid ${courseColor};
+                                        padding: 8px 12px;
+                                        margin: 4px 0;
+                                        border-radius: 6px;
+                                        display: flex;
+                                        justify-content: space-between;
+                                        align-items: center;
+                                    ">
+                                        <span style="font-weight: bold;">${days[slot.day]}</span>
+                                        <span style="
+                                            background: ${courseColor}33;
+                                            padding: 2px 8px;
+                                            border-radius: 12px;
+                                            font-size: 0.9em;
+                                        ">
+                                            ${displayStartHour}:${startMin} - ${displayEndHour}:${endMin} ${period}
+                                        </span>
+                                    </div>
+                                `;
+                            }).join('');
+                            
+                            const scheduleCount = variation.scheduleIndices.length;
+                            const schedulePercentage = (scheduleCount / schedules.length * 100).toFixed(0);
+                            
+                            return `
+                                <div class="variation-card" style="
+                                    background: var(--bg-color);
+                                    border-radius: 8px;
+                                    padding: 12px;
+                                    position: relative;
+                                ">
+                                    <div class="variation-header" style="
+                                        display: flex;
+                                        justify-content: space-between;
+                                        align-items: center;
+                                        margin-bottom: 8px;
+                                    ">
+                                        <span style="font-weight: bold; color: var(--text-color);">خيار ${index + 1}</span>
+                                        <span style="
+                                            background: ${courseColor};
+                                            padding: 2px 8px;
+                                            border-radius: 10px;
+                                            font-size: 0.8em;
+                                            color: white;
+                                        ">${schedulePercentage}% من الجداول</span>
+                                    </div>
+                                    <div style="color: var(--text-color); font-size: 0.9em;">
+                                        <div style="margin-bottom: 8px;">${variation.instructor}</div>
+                                        <div class="time-blocks" style="margin: 10px 0;">
+                                            ${timeBlocks}
+                                        </div>
+                                    </div>
+                                    <div style="
+                                        font-size: 0.8em;
+                                        color: var(--text-color);
+                                        opacity: 0.7;
+                                        margin-top: 8px;
+                                        text-align: left;
+                                    ">
+                                        الجداول: ${variation.scheduleIndices.join(', ')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
     }
     
-    return differences;
+    overviewHTML += '</div>';
+    return overviewHTML;
 }
 
-// Update the color generation function to create modern gradients
-function generateCourseColor(courseName) {
-    // Check if we already have a color for this course
-    if (courseColors.has(courseName)) {
-        return courseColors.get(courseName);
-    }
-
-    // Generate a hash of the course name
-    let hash = 0;
-    for (let i = 0; i < courseName.length; i++) {
-        hash = courseName.charCodeAt(i) + ((hash << 5) - hash);
-    }
-
-    // Generate two different hues for gradient
-    const hue1 = Math.abs(hash % 360);
-    const hue2 = (hue1 + 20 + (hash % 40)) % 360; // Slightly different hue
-    
-    // Generate HSL colors with good saturation and lightness for dark theme
-    const saturation = 75 + (hash % 15); // 75-90%
-    const lightness1 = 30 + (hash % 10); // 30-40%
-    const lightness2 = lightness1 - 10; // Slightly darker
-    
-    // Create gradient with transparency
-    const color = `linear-gradient(145deg, 
-        hsla(${hue1}, ${saturation}%, ${lightness1}%, 0.95) 0%, 
-        hsla(${hue2}, ${saturation}%, ${lightness2}%, 0.95) 100%)`;
-    
-    // Store the color for consistency
-    courseColors.set(courseName, color);
-    return color;
-}
-
-// Render schedule with navigation options
+// Update renderScheduleWithOptions to show the overview
 function renderScheduleWithOptions(result) {
     console.log('Rendering schedule options:', result);
     const { schedules, message } = result;
@@ -641,6 +799,7 @@ function renderScheduleWithOptions(result) {
     scheduleResultEl.innerHTML = `
         <h2>Your Schedule Results</h2>
         <div class="optimization-message"></div>
+        <div class="schedule-overview-container"></div>
         <div class="schedule-navigation"></div>
         <div class="timetable" style="direction: rtl;">
             <table style="width: 100%;">
@@ -669,6 +828,12 @@ function renderScheduleWithOptions(result) {
     const messageDiv = scheduleResultEl.querySelector('.optimization-message');
     messageDiv.style.cssText = 'padding: 10px; margin: 15px 0; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color);';
     messageDiv.textContent = message;
+    
+    // Add schedule overview if there are multiple schedules
+    if (schedules.length > 1) {
+        const overviewDiv = scheduleResultEl.querySelector('.schedule-overview-container');
+        overviewDiv.innerHTML = generateScheduleOverview(schedules);
+    }
     
     // Update navigation if there are schedules
     const navControls = scheduleResultEl.querySelector('.schedule-navigation');
@@ -857,4 +1022,36 @@ function renderSchedule(schedule) {
     }
     
     console.log('Schedule rendered successfully');
+}
+
+// Update the color generation function to create modern gradients
+function generateCourseColor(courseName) {
+    // Check if we already have a color for this course
+    if (courseColors.has(courseName)) {
+        return courseColors.get(courseName);
+    }
+
+    // Generate a hash of the course name
+    let hash = 0;
+    for (let i = 0; i < courseName.length; i++) {
+        hash = courseName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // Generate two different hues for gradient
+    const hue1 = Math.abs(hash % 360);
+    const hue2 = (hue1 + 20 + (hash % 40)) % 360; // Slightly different hue
+    
+    // Generate HSL colors with good saturation and lightness for dark theme
+    const saturation = 75 + (hash % 15); // 75-90%
+    const lightness1 = 30 + (hash % 10); // 30-40%
+    const lightness2 = lightness1 - 10; // Slightly darker
+    
+    // Create gradient with transparency
+    const color = `linear-gradient(145deg, 
+        hsla(${hue1}, ${saturation}%, ${lightness1}%, 0.95) 0%, 
+        hsla(${hue2}, ${saturation}%, ${lightness2}%, 0.95) 100%)`;
+    
+    // Store the color for consistency
+    courseColors.set(courseName, color);
+    return color;
 } 
