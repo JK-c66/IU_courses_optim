@@ -201,9 +201,8 @@ function renderAvailableCourses() {
                 section.section_type === 'عملي'
             );
             return `
-                <div class="course-item" data-course="${course}">
+                <div class="course-item" data-course="${course}" style="--lab-display: ${hasLab ? 'inline-block' : 'none'}">
                     <h3>${course}</h3>
-                    <p>Click to select${hasLab ? ' (includes lab)' : ''}</p>
                 </div>
             `;
         }).join('');
