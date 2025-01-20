@@ -762,7 +762,7 @@ function generateScheduleOverview(schedules) {
                         padding: 4px 8px;
                         border-radius: 12px;
                         font-size: 0.9em;
-                    ">${data.variations.length} خيارات</span>
+                    ">${data.variations.filter(v => (v.scheduleIndices.length / schedules.length * 100) < 100).length} خيارات</span>
                 </div>
                 
                 <div class="course-content" style="padding: 15px;">
