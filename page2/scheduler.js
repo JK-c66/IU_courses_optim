@@ -6,6 +6,9 @@ let currentScheduleIndex = 0; // Track which schedule is being displayed
 let currentResult = null; // Store current schedule result
 let courseColors = new Map();
 
+// Add new conflict tracking functionality
+let scheduleConflicts = [];
+
 // DOM Elements
 const availableCoursesEl = document.getElementById('availableCourses');
 const doctorPreferencesEl = document.getElementById('doctorPreferences');
@@ -326,6 +329,9 @@ function generateSchedule() {
         return;
     }
 
+    // Reset conflicts array at the start of new schedule generation
+    scheduleConflicts = [];
+
     console.log('Selected courses:', Array.from(selectedCourses));
     console.log('Selected doctors:', Object.fromEntries(selectedDoctors));
 
@@ -341,7 +347,12 @@ function generateSchedule() {
     const validSections = coursesData.filter(section => {
         if (!selectedCourses.has(section.section_course)) return false;
         if (selectedDoctors.has(section.section_course)) {
-            return section.section_instructor === selectedDoctors.get(section.section_course);
+            const prefs = selectedDoctors.get(section.section_course);
+            if (section.section_type === 'عملي' && prefs.lab) {
+                return section.section_instructor === prefs.lab;
+            } else if (section.section_type !== 'عملي' && prefs.lecture) {
+                return section.section_instructor === prefs.lecture;
+            }
         }
         return true;
     });
@@ -374,12 +385,9 @@ function generateSchedule() {
     currentResult = findBestSchedule(combinations, optimizationType);
     console.log('Best schedule result:', currentResult);
     
-    if (currentResult.schedules.length > 0) {
-        currentScheduleIndex = 0;
-        renderScheduleWithOptions(currentResult);
-    } else {
-        alert(currentResult.message || 'No valid schedule found with the given constraints');
-    }
+    // Render the results without alert
+    currentScheduleIndex = 0;
+    renderScheduleWithOptions(currentResult);
 }
 
 // Helper function to parse time slots from the time string
@@ -530,16 +538,25 @@ function generateCombinations(courseGroups) {
     return combinations;
 }
 
-// Helper function to check for time conflicts
+// Helper function to check for time conflicts and track them
 function hasTimeConflict(sections) {
+    let conflicts = [];
     for (let i = 0; i < sections.length; i++) {
         for (let j = i + 1; j < sections.length; j++) {
             if (sectionsOverlap(sections[i], sections[j])) {
-                return true;
+                conflicts.push({
+                    course1: sections[i],
+                    course2: sections[j],
+                    times1: parseTimeSlots(sections[i].section_times),
+                    times2: parseTimeSlots(sections[j].section_times)
+                });
             }
         }
     }
-    return false;
+    if (conflicts.length > 0) {
+        scheduleConflicts.push(...conflicts);
+    }
+    return conflicts.length > 0;
 }
 
 // Helper function to check if two sections overlap in time
@@ -986,7 +1003,242 @@ function generateScheduleOverview(schedules) {
     return overviewHTML;
 }
 
-// Update renderScheduleWithOptions to show the overview
+// Helper function to analyze conflicts and find the most problematic courses
+function analyzeConflicts() {
+    const conflictCounts = new Map();
+    const conflictDetails = new Map();
+
+    scheduleConflicts.forEach(conflict => {
+        const course1 = conflict.course1.section_course;
+        const course2 = conflict.course2.section_course;
+
+        // Count conflicts per course pair
+        const coursePair = [course1, course2].sort().join(' & ');
+        conflictCounts.set(coursePair, (conflictCounts.get(coursePair) || 0) + 1);
+
+        // Store conflict details
+        if (!conflictDetails.has(coursePair)) {
+            conflictDetails.set(coursePair, {
+                courses: [conflict.course1, conflict.course2],
+                times1: conflict.times1,
+                times2: conflict.times2,
+                count: 1
+            });
+        } else {
+            conflictDetails.get(coursePair).count++;
+        }
+    });
+
+    return {
+        counts: conflictCounts,
+        details: conflictDetails
+    };
+}
+
+// Function to generate conflict explanation HTML
+function generateConflictExplanation() {
+    if (scheduleConflicts.length === 0) {
+        return `
+            <div class="no-conflicts" style="
+                padding: 20px;
+                text-align: center;
+                background: var(--bg-secondary);
+                border-radius: 8px;
+                margin: 20px 0;
+                color: var(--text-color);
+            ">
+                لم يتم العثور على تعارضات محددة. قد يكون هذا بسبب تفضيلات المحاضرين أو قيود أخرى.
+            </div>
+        `;
+    }
+
+    const analysis = analyzeConflicts();
+    let html = `
+        <div class="conflicts-container" style="
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            direction: rtl;
+        ">
+            <div style="
+                background: var(--bg-color);
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                text-align: center;
+                color: var(--text-color);
+                border: 1px solid var(--border-color);
+            ">
+                <h3 style="margin: 0 0 10px 0;">لم يتم العثور على جدول صالح</h3>
+                <p style="margin: 0;">تم العثور على التعارضات التالية بين المواد المختارة:</p>
+            </div>
+    `;
+
+    // Sort conflicts by count
+    const sortedConflicts = Array.from(analysis.details.entries())
+        .sort((a, b) => b[1].count - a[1].count);
+
+    sortedConflicts.forEach(([coursePair, details]) => {
+        const [course1, course2] = details.courses;
+        const color1 = generateCourseColor(course1.section_course);
+        const color2 = generateCourseColor(course2.section_course);
+
+        html += `
+            <div class="conflict-card" style="
+                background: var(--bg-color);
+                border-radius: 8px;
+                margin-bottom: 15px;
+                padding: 15px;
+                border: 1px solid var(--border-color);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            ">
+                <div class="conflict-header" style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 15px;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                ">
+                    <div class="courses" style="
+                        display: flex;
+                        gap: 10px;
+                        align-items: center;
+                        flex-wrap: wrap;
+                    ">
+                        <span style="
+                            background: ${color1};
+                            padding: 8px 16px;
+                            border-radius: 8px;
+                            color: white;
+                            font-weight: bold;
+                        ">${course1.section_course}</span>
+                        <span style="
+                            color: var(--text-color);
+                            white-space: nowrap;
+                        ">يتعارض مع</span>
+                        <span style="
+                            background: ${color2};
+                            padding: 8px 16px;
+                            border-radius: 8px;
+                            color: white;
+                            font-weight: bold;
+                        ">${course2.section_course}</span>
+                    </div>
+                    <span style="
+                        background: var(--bg-secondary);
+                        padding: 4px 12px;
+                        border-radius: 12px;
+                        font-size: 0.9em;
+                        color: var(--text-color);
+                        white-space: nowrap;
+                    ">${details.count} تعارض</span>
+                </div>
+                <div class="conflict-details" style="
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 15px;
+                    margin-top: 10px;
+                ">
+                    <div class="course-times" style="
+                        background: ${color1}22;
+                        padding: 12px;
+                        border-radius: 8px;
+                        border: 1px solid ${color1}44;
+                    ">
+                        <div style="
+                            color: var(--text-color);
+                            margin-bottom: 8px;
+                            font-weight: bold;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        ">
+                            <span>${course1.section_instructor}</span>
+                            <span style="
+                                font-size: 0.9em;
+                                background: ${color1}33;
+                                padding: 2px 8px;
+                                border-radius: 4px;
+                            ">${course1.section_type}</span>
+                        </div>
+                        ${details.times1.map(time => `
+                            <div style="
+                                background: ${color1}33;
+                                padding: 8px;
+                                margin: 4px 0;
+                                border-radius: 4px;
+                                color: var(--text-color);
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                            ">
+                                <span>${['', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'][time.day]}</span>
+                                <span style="
+                                    background: ${color1}66;
+                                    padding: 2px 8px;
+                                    border-radius: 4px;
+                                    font-size: 0.9em;
+                                ">${formatTimeForDisplay(time.start)} - ${formatTimeForDisplay(time.end)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="course-times" style="
+                        background: ${color2}22;
+                        padding: 12px;
+                        border-radius: 8px;
+                        border: 1px solid ${color2}44;
+                    ">
+                        <div style="
+                            color: var(--text-color);
+                            margin-bottom: 8px;
+                            font-weight: bold;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        ">
+                            <span>${course2.section_instructor}</span>
+                            <span style="
+                                font-size: 0.9em;
+                                background: ${color2}33;
+                                padding: 2px 8px;
+                                border-radius: 4px;
+                            ">${course2.section_type}</span>
+                        </div>
+                        ${details.times2.map(time => `
+                            <div style="
+                                background: ${color2}33;
+                                padding: 8px;
+                                margin: 4px 0;
+                                border-radius: 4px;
+                                color: var(--text-color);
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                            ">
+                                <span>${['', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'][time.day]}</span>
+                                <span style="
+                                    background: ${color2}66;
+                                    padding: 2px 8px;
+                                    border-radius: 4px;
+                                    font-size: 0.9em;
+                                ">${formatTimeForDisplay(time.start)} - ${formatTimeForDisplay(time.end)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    return html;
+}
+
+// Update renderScheduleWithOptions to show conflicts when no schedules are found
 function renderScheduleWithOptions(result) {
     console.log('Rendering schedule options:', result);
     const { schedules, message } = result;
@@ -995,29 +1247,31 @@ function renderScheduleWithOptions(result) {
         <h2 id="scheduleTableTop">Your Schedule Results</h2>
         <div class="optimization-message"></div>
         <div class="schedule-navigation"></div>
-        <div class="room-toggle" style="margin: 15px 0; text-align: right;">
-            <button id="toggleRoomBtn" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
-                إظهار أرقام القاعات
-            </button>
-        </div>
-        <div class="timetable" style="direction: rtl;">
-            <table style="width: 100%;">
-                <thead>
-                    <tr>
-                        <th>الوقت</th>
-                        <th>الخميس</th>
-                        <th>الأربعاء</th>
-                        <th>الثلاثاء</th>
-                        <th>الاثنين</th>
-                        <th>الأحد</th>
-                    </tr>
-                </thead>
-                <tbody id="scheduleBody">
-                    <!-- Schedule will be populated here -->
-                </tbody>
-            </table>
-        </div>
-        <div class="schedule-overview-container"></div>
+        ${schedules.length === 0 ? generateConflictExplanation() : `
+            <div class="room-toggle" style="margin: 15px 0; text-align: right;">
+                <button id="toggleRoomBtn" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                    إظهار أرقام القاعات
+                </button>
+            </div>
+            <div class="timetable" style="direction: rtl;">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>الوقت</th>
+                            <th>الخميس</th>
+                            <th>الأربعاء</th>
+                            <th>الثلاثاء</th>
+                            <th>الاثنين</th>
+                            <th>الأحد</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody">
+                        <!-- Schedule will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="schedule-overview-container"></div>
+        `}
     `;
     
     // Update the header
