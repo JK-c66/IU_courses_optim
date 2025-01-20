@@ -314,117 +314,82 @@ button:hover, .file-button:hover {
 
 /* Modern color palette for course blocks */
 .course-block {
-    background: var(--course-bg, linear-gradient(145deg, #1a2634 0%, #15202b 100%));
-    padding: 12px;
-    border-radius: 6px;
+    padding: 12px 12px 12px 80px;
+    border-radius: 12px;
     margin-bottom: 8px;
     font-size: 0.9rem;
-    border-right: 3px solid var(--course-accent, #3182ce);
-    border-left: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
     text-align: right;
     position: relative;
-}
-
-/* Subject-specific colors */
-.course-block[data-course*="نظرية الاتصالات"] {
-    --course-bg: linear-gradient(145deg, #1a2634 0%, #15202b 100%);
-    --course-accent: #3182ce;
-}
-
-.course-block[data-course*="نظرية التحكم"] {
-    --course-bg: linear-gradient(145deg, #2d1b38 0%, #231029 100%);
-    --course-accent: #9f7aea;
-}
-
-.course-block[data-course*="أنظمة القدرة"] {
-    --course-bg: linear-gradient(145deg, #1c3831 0%, #132a24 100%);
-    --course-accent: #48bb78;
-}
-
-.course-block[data-course*="معالجة"] {
-    --course-bg: linear-gradient(145deg, #2d1d24 0%, #1f1418 100%);
-    --course-accent: #ed64a6;
-}
-
-.course-block[data-course*="مواضيع"] {
-    --course-bg: linear-gradient(145deg, #2b2318 0%, #1c1710 100%);
-    --course-accent: #ecc94b;
-}
-
-.course-block[data-course*="الاحتمالات"] {
-    --course-bg: linear-gradient(145deg, #182c3a 0%, #0f1e28 100%);
-    --course-accent: #4fd1c5;
-}
-
-.course-block[data-course*="العقيدة"] {
-    --course-bg: linear-gradient(145deg, #2a1f2d 0%, #1a1520 100%);
-    --course-accent: #b794f4;
-}
-
-.course-block[data-course*="الفقه"] {
-    --course-bg: linear-gradient(145deg, #1f2d2a 0%, #162420 100%);
-    --course-accent: #68d391;
-}
-
-.course-block[data-course*="التحرير"] {
-    --course-bg: linear-gradient(145deg, #2d1f1f 0%, #201616 100%);
-    --course-accent: #fc8181;
+    min-height: 100px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
 }
 
 .course-block:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
     filter: brightness(1.1);
 }
 
 .course-block.lab-section {
-    background: linear-gradient(145deg, #162231 0%, #0d1620 100%);
-    border: 1px solid rgba(79, 209, 197, 0.3);
-    border-right: 3px solid #4fd1c5;
-    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .course-block.lab-section::before {
     content: 'عملي';
     position: absolute;
-    top: 8px;
-    left: 8px;
-    background: rgba(79, 209, 197, 0.2);
-    color: #4fd1c5;
-    padding: 2px 8px;
-    border-radius: 4px;
+    top: 12px;
+    left: 12px;
+    background: rgb(6, 182, 212);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 8px;
     font-size: 0.8em;
-    border: 1px solid rgba(79, 209, 197, 0.3);
+    border: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-shadow: none;
+    z-index: 1;
 }
 
 .course-block.lecture-section::before {
     content: 'نظري';
     position: absolute;
-    top: 8px;
-    left: 8px;
-    background: rgba(226, 144, 74, 0.2);
-    color: #e2904a;
-    padding: 2px 8px;
-    border-radius: 4px;
+    top: 12px;
+    left: 12px;
+    background: rgb(147, 51, 234);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 8px;
     font-size: 0.8em;
-    border: 1px solid rgba(226, 144, 74, 0.3);
+    border: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-shadow: none;
+    z-index: 1;
 }
 
 .course-block strong {
-    color: #edf2f7;
+    color: #ffffff;
     display: block;
     margin-bottom: 0.7rem;
     font-size: 1rem;
     font-weight: 600;
+    word-wrap: break-word;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .course-block small {
     display: block;
-    color: #cbd5e0;
+    color: rgba(255, 255, 255, 0.95);
     margin-bottom: 0.3rem;
     font-size: 0.85rem;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
 }
 
 /* Hide type display for both lab and lecture sections since we show it as a badge */

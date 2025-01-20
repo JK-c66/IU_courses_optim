@@ -4,6 +4,7 @@ let selectedCourses = new Set();
 let selectedDoctors = new Map(); // course -> selected doctor
 let currentScheduleIndex = 0; // Track which schedule is being displayed
 let currentResult = null; // Store current schedule result
+let courseColors = new Map();
 
 // DOM Elements
 const availableCoursesEl = document.getElementById('availableCourses');
@@ -600,16 +601,36 @@ function compareSchedules(schedule1, schedule2) {
     return differences;
 }
 
-// Add color generation function
+// Update the color generation function to create modern gradients
 function generateCourseColor(courseName) {
+    // Check if we already have a color for this course
+    if (courseColors.has(courseName)) {
+        return courseColors.get(courseName);
+    }
+
     // Generate a hash of the course name
     let hash = 0;
     for (let i = 0; i < courseName.length; i++) {
         hash = courseName.charCodeAt(i) + ((hash << 5) - hash);
     }
-    // Convert to HSL color with fixed saturation and lightness
-    const hue = Math.abs(hash % 360);
-    return `hsl(${hue}, 70%, 25%)`;
+
+    // Generate two different hues for gradient
+    const hue1 = Math.abs(hash % 360);
+    const hue2 = (hue1 + 20 + (hash % 40)) % 360; // Slightly different hue
+    
+    // Generate HSL colors with good saturation and lightness for dark theme
+    const saturation = 75 + (hash % 15); // 75-90%
+    const lightness1 = 30 + (hash % 10); // 30-40%
+    const lightness2 = lightness1 - 10; // Slightly darker
+    
+    // Create gradient with transparency
+    const color = `linear-gradient(145deg, 
+        hsla(${hue1}, ${saturation}%, ${lightness1}%, 0.95) 0%, 
+        hsla(${hue2}, ${saturation}%, ${lightness2}%, 0.95) 100%)`;
+    
+    // Store the color for consistency
+    courseColors.set(courseName, color);
+    return color;
 }
 
 // Render schedule with navigation options
@@ -798,9 +819,8 @@ function renderSchedule(schedule) {
                         <div class="course-block ${course.section_type === 'عملي' ? 'lab-section' : 'lecture-section'}"
                             data-course="${course.section_course}"
                             style="
-                                padding: 8px;
-                                margin: 2px;
-                                border-radius: 4px;
+                                padding: 12px 12px 12px 80px;
+                                border-radius: 12px;
                                 background: ${courseColor};
                                 color: white;
                                 font-size: 0.9em;
