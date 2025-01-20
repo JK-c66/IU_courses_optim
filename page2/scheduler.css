@@ -38,7 +38,7 @@ body {
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 1rem;
 }
 
 header {
@@ -47,7 +47,7 @@ header {
 }
 
 header h1 {
-    font-size: 2.5rem;
+    font-size: 2rem;
     color: #fff;
     margin-bottom: 1rem;
 }
@@ -65,21 +65,36 @@ h2 {
 
 .input-methods {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+    grid-template-columns: 1fr;
+    gap: 1rem;
     margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+    .input-methods {
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+    
+    .container {
+        padding: 2rem;
+    }
+    
+    header h1 {
+        font-size: 2.5rem;
+    }
 }
 
 .text-input, .file-drop {
     background: #252525;
-    padding: 1.5rem;
+    padding: 1.25rem;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 textarea {
     width: 100%;
-    height: 200px;
+    height: 150px;
     padding: 1rem;
     background: #333;
     border: 1px solid #444;
@@ -88,6 +103,13 @@ textarea {
     font-family: monospace;
     resize: vertical;
     margin-bottom: 1rem;
+    font-size: 14px;
+}
+
+@media (min-width: 768px) {
+    textarea {
+        height: 200px;
+    }
 }
 
 button, .file-button {
@@ -151,7 +173,7 @@ button:hover, .file-button:hover {
 
 .course-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 15px;
     margin-top: 15px;
 }
@@ -163,6 +185,19 @@ button:hover, .file-button:hover {
     border: 1px solid var(--border-color);
     cursor: pointer;
     transition: all 0.3s ease;
+    min-height: 80px;
+}
+
+/* Make course items more tappable on mobile */
+@media (max-width: 767px) {
+    .course-item {
+        padding: 20px;
+        min-height: 100px;
+    }
+    
+    .course-item h3 {
+        font-size: 1.2rem;
+    }
 }
 
 .course-item:hover {
@@ -727,4 +762,150 @@ nav a:hover {
     margin-top: 10px;
     color: var(--accent-color);
     font-size: 0.85em;
+}
+
+/* Schedule table mobile styles */
+@media (max-width: 767px) {
+    .timetable {
+        font-size: 14px;
+        margin: 10px -1rem;
+        width: calc(100% + 2rem);
+        border-radius: 0;
+    }
+
+    .timetable th,
+    .timetable td {
+        padding: 8px;
+        min-width: 120px;
+    }
+
+    .timetable th:first-child,
+    .timetable td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        min-width: 80px;
+        background: var(--bg-secondary);
+    }
+
+    .course-block {
+        padding: 8px 8px 8px 60px;
+        min-height: 80px;
+        font-size: 0.85rem;
+    }
+
+    .course-block::before,
+    .course-block::after {
+        font-size: 0.75em;
+        padding: 2px 8px;
+    }
+
+    .course-block strong {
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .course-block small {
+        font-size: 0.8rem;
+    }
+}
+
+/* Doctor preferences mobile styles */
+@media (max-width: 767px) {
+    .doctor-preferences select {
+        width: 100%;
+        padding: 12px;
+        margin: 5px 0;
+        font-size: 16px; /* Prevent iOS zoom on focus */
+    }
+
+    .course-doctors {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+}
+
+/* Schedule overview mobile styles */
+@media (max-width: 767px) {
+    .schedule-overview-container {
+        margin: 10px -1rem;
+        border-radius: 0;
+    }
+
+    .variation-details {
+        padding: 8px;
+    }
+
+    .variation-list {
+        grid-template-columns: 1fr;
+    }
+
+    .schedule-navigation {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .schedule-navigation button {
+        flex: 1;
+        min-width: 120px;
+    }
+}
+
+/* Conflict explanation mobile styles */
+@media (max-width: 767px) {
+    .conflicts-container {
+        margin: 10px -1rem;
+        padding: 15px;
+        border-radius: 0;
+    }
+
+    .conflict-card {
+        padding: 12px;
+    }
+
+    .conflict-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .conflict-details {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Button and interactive element mobile styles */
+@media (max-width: 767px) {
+    button, .file-button {
+        padding: 12px 20px;
+        min-height: 48px; /* Minimum touch target size */
+        font-size: 16px;
+    }
+
+    .optimize-button {
+        width: 100%;
+        max-width: none;
+        margin: 20px 0;
+    }
+
+    .preference-option {
+        padding: 15px;
+    }
+
+    .preference-option input[type="radio"] {
+        width: 24px;
+        height: 24px;
+        margin-right: 12px;
+    }
+}
+
+/* Improve scrolling experience on mobile */
+@media (max-width: 767px) {
+    .timetable {
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+    }
+
+    .timetable td {
+        scroll-snap-align: start;
+    }
 } 
