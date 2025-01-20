@@ -1820,4 +1820,46 @@ nav a:hover {
     font-size: 0.8em;
     transform: translateY(-50%);
     box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.3);
+}
+
+/* Viewer Button Styles */
+.viewer-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.viewer-button::before {
+    content: '👁️';
+    font-size: 1.1em;
+}
+
+.viewer-button:hover {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.viewer-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 767px) {
+    .viewer-button {
+        width: 100%;
+        justify-content: center;
+        padding: 14px 20px;
+        font-size: 1.1rem;
+    }
 } 
