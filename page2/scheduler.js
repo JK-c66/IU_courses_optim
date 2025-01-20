@@ -226,8 +226,20 @@ function setupEventListeners() {
     });
 
     // Optimization preference
-    document.querySelectorAll('input[name="optimization"]').forEach(radio => {
+    document.querySelectorAll('input[name="optimization-preference"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
+            // Remove selected state from all options
+            document.querySelectorAll('.preference-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Add selected state to parent
+            const selectedOption = e.target.closest('.preference-option');
+            if (selectedOption) {
+                selectedOption.classList.add('selected');
+            }
+
+            // Show/hide doctor preferences
             if (e.target.value === 'specific-doctors') {
                 showDoctorPreferences();
             } else {
@@ -244,6 +256,11 @@ function setupEventListeners() {
 function showDoctorPreferences() {
     if (selectedCourses.size === 0) {
         alert('Please select courses first');
+        const radioBtn = document.querySelector('input[value="specific-doctors"]');
+        if (radioBtn) {
+            radioBtn.checked = false;
+            radioBtn.closest('.preference-option').classList.remove('selected');
+        }
         return;
     }
 
@@ -256,25 +273,39 @@ function showDoctorPreferences() {
             .filter(section => section.section_type === 'عملي')
             .map(section => section.section_instructor));
 
-        // Only show lab selection if the course has labs
-        const hasLabs = labDoctors.size > 0;
+        // Only show selection if there are multiple doctors
+        const hasMultipleLecturers = lectureDoctors.size > 1;
+        const hasMultipleLabs = labDoctors.size > 1;
+
+        // If no multiple options, don't show anything
+        if (!hasMultipleLecturers && !hasMultipleLabs) {
+            return '';
+        }
 
         return `
             <div class="course-doctors">
                 <h3>${course}</h3>
-                <div style="display: grid; gap: 10px;">
-                    <div>
-                        <label style="display: block; margin-bottom: 5px;">محاضر المادة:</label>
-                        <select data-course="${course}" data-type="lecture" class="doctor-select">
-                            <option value="">Any Doctor</option>
-                            ${Array.from(lectureDoctors).map(doctor => 
-                                `<option value="${doctor}">${doctor}</option>`
-                            ).join('')}
-                        </select>
-                    </div>
-                    ${hasLabs ? `
-                        <div>
-                            <label style="display: block; margin-bottom: 5px;">محاضر المعمل:</label>
+                <div class="select-groups">
+                    ${hasMultipleLecturers ? `
+                        <div class="select-wrapper">
+                            <label class="select-label">
+                                <span class="section-type lecture">محاضرة</span>
+                                محاضر المادة
+                            </label>
+                            <select data-course="${course}" data-type="lecture" class="doctor-select">
+                                <option value="">Any Doctor</option>
+                                ${Array.from(lectureDoctors).map(doctor => 
+                                    `<option value="${doctor}">${doctor}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                    ` : ''}
+                    ${hasMultipleLabs ? `
+                        <div class="select-wrapper">
+                            <label class="select-label">
+                                <span class="section-type lab">معمل</span>
+                                محاضر المعمل
+                            </label>
                             <select data-course="${course}" data-type="lab" class="doctor-select">
                                 <option value="">Any Doctor</option>
                                 ${Array.from(labDoctors).map(doctor => 
@@ -286,13 +317,33 @@ function showDoctorPreferences() {
                 </div>
             </div>
         `;
-    }).join('');
+    }).filter(Boolean); // Remove empty strings
 
-    doctorPreferencesEl.innerHTML = `
-        <h2>3. Select Preferred Doctors</h2>
-        ${doctorOptions}
-    `;
+    // Only show the preferences section if there are courses with multiple doctors
+    if (doctorOptions.length === 0) {
+        doctorPreferencesEl.innerHTML = `
+            <div style="padding: 15px; text-align: center; color: var(--text-color);">
+                لا يوجد خيارات متعددة للمحاضرين في المواد المختارة
+            </div>
+        `;
+    } else {
+        doctorPreferencesEl.innerHTML = `
+            <h2>3. اختر المحاضرين المفضلين</h2>
+            ${doctorOptions.join('')}
+        `;
+    }
+
+    // Slide down animation
     doctorPreferencesEl.style.display = 'block';
+    doctorPreferencesEl.style.opacity = '0';
+    doctorPreferencesEl.style.transform = 'translateY(-20px)';
+    doctorPreferencesEl.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    
+    // Trigger animation
+    setTimeout(() => {
+        doctorPreferencesEl.style.opacity = '1';
+        doctorPreferencesEl.style.transform = 'translateY(0)';
+    }, 10);
 
     // Setup doctor selection listeners
     doctorPreferencesEl.querySelectorAll('select').forEach(select => {
@@ -331,15 +382,14 @@ function generateSchedule() {
     // Reset conflicts array at the start of new schedule generation
     scheduleConflicts = [];
 
-    console.log('Selected courses:', Array.from(selectedCourses));
-    console.log('Selected doctors:', Object.fromEntries(selectedDoctors));
-
-    const optimizationType = document.querySelector('input[name="optimization"]:checked')?.value;
+    const optimizationType = document.querySelector('input[name="optimization-preference"]:checked')?.value;
     if (!optimizationType) {
         alert('Please select an optimization preference');
         return;
     }
 
+    console.log('Selected courses:', Array.from(selectedCourses));
+    console.log('Selected doctors:', Object.fromEntries(selectedDoctors));
     console.log('Optimization type:', optimizationType);
 
     // Get all valid sections for selected courses
@@ -591,8 +641,8 @@ function findBestSchedule(combinations, optimizationType) {
             return findSchedulesWithThursdayOff(combinations);
         case 'specific-doctors':
             return {
-                schedules: [combinations[0]],
-                message: 'Found schedule with specified doctors'
+                schedules: combinations,
+                message: `Found ${combinations.length} possible schedule(s) with specified doctors`
             };
         default:
             return {
