@@ -61,7 +61,7 @@ searchInput.addEventListener('input', filterAndDisplayCourses);
 filterSelect.addEventListener('change', filterAndDisplayCourses);
 
 goToSchedulerBtn.addEventListener('click', () => {
-    window.location.href = '../page2/scheduler.html';
+    window.location.href = 'page1/scheduler.html';
 });
 
 // File handling

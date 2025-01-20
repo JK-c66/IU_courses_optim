@@ -23,7 +23,7 @@ const fileName = document.getElementById('fileName');
 const goToViewerBtn = document.getElementById('goToViewer');
 
 goToViewerBtn.addEventListener('click', () => {
-    window.location.href = '../page1/index.html';
+    window.location.href = '../index.html';
 });
 
 // Validate DOM elements
