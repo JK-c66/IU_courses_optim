@@ -247,17 +247,41 @@ function showDoctorPreferences() {
 
     const doctorOptions = Array.from(selectedCourses).map(course => {
         const sections = coursesData.filter(section => section.section_course === course);
-        const doctors = new Set(sections.map(section => section.section_instructor));
+        const lectureDoctors = new Set(sections
+            .filter(section => section.section_type !== 'عملي')
+            .map(section => section.section_instructor));
+        const labDoctors = new Set(sections
+            .filter(section => section.section_type === 'عملي')
+            .map(section => section.section_instructor));
+
+        // Only show lab selection if the course has labs
+        const hasLabs = labDoctors.size > 0;
 
         return `
             <div class="course-doctors">
                 <h3>${course}</h3>
-                <select data-course="${course}" class="doctor-select">
-                    <option value="">Any Doctor</option>
-                    ${Array.from(doctors).map(doctor => 
-                        `<option value="${doctor}">${doctor}</option>`
-                    ).join('')}
-                </select>
+                <div style="display: grid; gap: 10px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px;">محاضر المادة:</label>
+                        <select data-course="${course}" data-type="lecture" class="doctor-select">
+                            <option value="">Any Doctor</option>
+                            ${Array.from(lectureDoctors).map(doctor => 
+                                `<option value="${doctor}">${doctor}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    ${hasLabs ? `
+                        <div>
+                            <label style="display: block; margin-bottom: 5px;">محاضر المعمل:</label>
+                            <select data-course="${course}" data-type="lab" class="doctor-select">
+                                <option value="">Any Doctor</option>
+                                ${Array.from(labDoctors).map(doctor => 
+                                    `<option value="${doctor}">${doctor}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                    ` : ''}
+                </div>
             </div>
         `;
     }).join('');
@@ -272,10 +296,23 @@ function showDoctorPreferences() {
     doctorPreferencesEl.querySelectorAll('select').forEach(select => {
         select.addEventListener('change', (e) => {
             const course = e.target.dataset.course;
+            const type = e.target.dataset.type;
             const doctor = e.target.value;
+            
+            // Initialize the course object if it doesn't exist
+            if (!selectedDoctors.has(course)) {
+                selectedDoctors.set(course, {});
+            }
+            
+            const coursePrefs = selectedDoctors.get(course);
             if (doctor) {
-                selectedDoctors.set(course, doctor);
+                coursePrefs[type] = doctor;
             } else {
+                delete coursePrefs[type];
+            }
+            
+            // Remove the course entry if no preferences are set
+            if (Object.keys(coursePrefs).length === 0) {
                 selectedDoctors.delete(course);
             }
         });
@@ -446,29 +483,40 @@ function generateCombinations(courseGroups) {
     for (const [course, sections] of Object.entries(courseGroups)) {
         const currentCombinations = [];
         for (const combination of combinations) {
+            // Get doctor preferences for this course
+            const coursePrefs = selectedDoctors.get(course) || {};
+            
+            // Filter lectures based on preferences
+            const validLectures = sections.lectures.filter(lecture => {
+                if (!lecture.section_times) return false;
+                if (coursePrefs.lecture) {
+                    return lecture.section_instructor === coursePrefs.lecture;
+                }
+                return true;
+            });
+
             // Add lecture sections
-            for (const lecture of sections.lectures) {
-                if (!lecture.section_times) continue; // Skip sections with no times
-                
+            for (const lecture of validLectures) {
                 if (sections.labs.length > 0) {
-                    // If course has labs, add each valid lecture-lab pair
-                    for (const lab of sections.labs) {
-                        if (!lab.section_times) continue; // Skip labs with no times
-                        
-                        // Check if lab and lecture have the same instructor or if they can be mixed
-                        if (!selectedDoctors.has(course) || 
-                            lab.section_instructor === lecture.section_instructor) {
-                            const newCombination = [...combination, lecture, lab];
-                            // Only add if there are no time conflicts
-                            if (!hasTimeConflict(newCombination)) {
-                                currentCombinations.push(newCombination);
-                            }
+                    // Filter labs based on preferences
+                    const validLabs = sections.labs.filter(lab => {
+                        if (!lab.section_times) return false;
+                        if (coursePrefs.lab) {
+                            return lab.section_instructor === coursePrefs.lab;
+                        }
+                        return true;
+                    });
+
+                    // Add each valid lecture-lab pair
+                    for (const lab of validLabs) {
+                        const newCombination = [...combination, lecture, lab];
+                        if (!hasTimeConflict(newCombination)) {
+                            currentCombinations.push(newCombination);
                         }
                     }
                 } else {
                     // Course doesn't have labs, just add the lecture
                     const newCombination = [...combination, lecture];
-                    // Only add if there are no time conflicts
                     if (!hasTimeConflict(newCombination)) {
                         currentCombinations.push(newCombination);
                     }
