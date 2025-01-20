@@ -983,6 +983,7 @@ function renderSchedule(schedule) {
                     tbodyContent += `
                         <div class="course-block ${course.section_type === 'عملي' ? 'lab-section' : 'lecture-section'}"
                             data-course="${course.section_course}"
+                            data-section="${sectionNumber}"
                             style="
                                 padding: 12px 12px 12px 80px;
                                 border-radius: 12px;
@@ -991,7 +992,6 @@ function renderSchedule(schedule) {
                                 font-size: 0.9em;
                             ">
                             <strong style="display: block; margin-bottom: 4px;">${course.section_course}</strong>
-                            <small style="display: block;">شعبة: ${sectionNumber}</small>
                             <small style="display: block;">${course.section_instructor}</small>
                             <small style="display: block;">قاعة: ${room}</small>
                         </div>

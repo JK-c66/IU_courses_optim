@@ -362,7 +362,25 @@ button:hover, .file-button:hover {
     position: absolute;
     top: 12px;
     left: 12px;
-    background: rgb(147, 51, 234);
+    background: rgb(59, 130, 246);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 0.8em;
+    border: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-shadow: none;
+    z-index: 1;
+}
+
+.course-block.lecture-section::after,
+.course-block.lab-section::after {
+    content: attr(data-section);
+    position: absolute;
+    top: 48px;
+    left: 12px;
+    background: rgb(75, 85, 99);
     color: white;
     padding: 4px 12px;
     border-radius: 8px;
