@@ -199,7 +199,7 @@ function initializeScheduler() {
                         gap: 10px;
                         cursor: pointer;
                     ">
-                        <span style="color: var(--text-color);">تضمين الشعب المغلقة</span>
+                        <span style="color: var(--text-color);">حساب الشعب المغلقة</span>
                         <input type="checkbox" id="closedSectionsToggle" checked style="
                             width: 20px;
                             height: 20px;
@@ -1183,7 +1183,54 @@ function analyzeConflicts() {
     };
 }
 
-// Function to generate conflict explanation HTML
+// Add new function to analyze which courses to remove
+function analyzeConflictResolution() {
+    // Track conflicts per course
+    const courseConflicts = new Map();
+    
+    scheduleConflicts.forEach(conflict => {
+        const course1 = conflict.course1.section_course;
+        const course2 = conflict.course2.section_course;
+        
+        courseConflicts.set(course1, (courseConflicts.get(course1) || 0) + 1);
+        courseConflicts.set(course2, (courseConflicts.get(course2) || 0) + 1);
+    });
+    
+    // Sort courses by number of conflicts
+    const sortedCourses = Array.from(courseConflicts.entries())
+        .sort((a, b) => b[1] - a[1]);
+    
+    // Analyze impact of removing each course
+    const removalSuggestions = sortedCourses.map(([course, conflictCount]) => {
+        // Find all conflicts involving this course
+        const relatedConflicts = scheduleConflicts.filter(conflict =>
+            conflict.course1.section_course === course ||
+            conflict.course2.section_course === course
+        );
+        
+        // Get unique courses that would be resolved
+        const resolvedCourses = new Set();
+        relatedConflicts.forEach(conflict => {
+            if (conflict.course1.section_course !== course) {
+                resolvedCourses.add(conflict.course1.section_course);
+            }
+            if (conflict.course2.section_course !== course) {
+                resolvedCourses.add(conflict.course2.section_course);
+            }
+        });
+        
+        return {
+            course,
+            conflictCount,
+            resolvedCourses: Array.from(resolvedCourses),
+            conflicts: relatedConflicts
+        };
+    });
+    
+    return removalSuggestions;
+}
+
+// Update generateConflictExplanation to show removal suggestions
 function generateConflictExplanation() {
     if (scheduleConflicts.length === 0) {
         return `
@@ -1200,7 +1247,8 @@ function generateConflictExplanation() {
         `;
     }
 
-    const analysis = analyzeConflicts();
+    const removalSuggestions = analyzeConflictResolution();
+    
     let html = `
         <div class="conflicts-container" style="
             max-width: 1200px;
@@ -1220,56 +1268,25 @@ function generateConflictExplanation() {
                 color: var(--text-color);
                 border: 1px solid var(--border-color);
             ">
-                <h3 style="margin: 0 0 10px 0;">لم يتم العثور على جدول صالح</h3>
-                <p style="margin: 0;">تم العثور على التعارضات التالية بين المواد المختارة:</p>
+                <h3 style="margin: 0 0 10px 0;">توجد مشكلة تعارضات</h3>
+                <p style="margin: 0;">يمكنك حل التعارضات عن طريق حذف إحدى المواد التالية:</p>
             </div>
     `;
 
-    // Check if any closed sections are involved in conflicts
-    const hasClosedSections = scheduleConflicts.some(conflict => 
-        conflict.course1.section_availability === 'مغلقة' || 
-        conflict.course2.section_availability === 'مغلقة'
-    );
-
-    if (hasClosedSections) {
+    // Add suggestions
+    removalSuggestions.forEach((suggestion, index) => {
+        const courseColor = generateCourseColor(suggestion.course);
+        
         html += `
-            <div style="
-                background: #ff9800;
-                color: white;
-                padding: 15px;
-                border-radius: 8px;
-                margin-bottom: 20px;
-                text-align: center;
-                font-weight: bold;
-            ">
-                تنبيه: بعض الشعب المتعارضة مغلقة. يرجى التحقق من توفر الشعب قبل التسجيل.
-            </div>
-        `;
-    }
-
-    // Sort conflicts by count
-    const sortedConflicts = Array.from(analysis.details.entries())
-        .sort((a, b) => b[1].count - a[1].count);
-
-    sortedConflicts.forEach(([coursePair, details]) => {
-        const [course1, course2] = details.courses;
-        const color1 = generateCourseColor(course1.section_course);
-        const color2 = generateCourseColor(course2.section_course);
-
-        // Add closed section indicators
-        const course1Closed = course1.section_availability === 'مغلقة';
-        const course2Closed = course2.section_availability === 'مغلقة';
-
-        html += `
-            <div class="conflict-card" style="
+            <div class="suggestion-card" style="
                 background: var(--bg-color);
                 border-radius: 8px;
                 margin-bottom: 15px;
-                padding: 15px;
+                padding: 20px;
                 border: 1px solid var(--border-color);
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             ">
-                <div class="conflict-header" style="
+                <div style="
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
@@ -1277,160 +1294,58 @@ function generateConflictExplanation() {
                     flex-wrap: wrap;
                     gap: 10px;
                 ">
-                    <div class="courses" style="
+                    <div style="
                         display: flex;
-                        gap: 10px;
                         align-items: center;
-                        flex-wrap: wrap;
+                        gap: 10px;
                     ">
                         <span style="
-                            background: ${color1};
+                            background: ${courseColor};
                             padding: 8px 16px;
                             border-radius: 8px;
                             color: white;
                             font-weight: bold;
-                            position: relative;
-                        ">
-                            ${course1.section_course}
-                            ${course1Closed ? `
-                                <span style="
-                                    position: absolute;
-                                    top: -8px;
-                                    right: -8px;
-                                    background: #ff9800;
-                                    color: white;
-                                    padding: 2px 8px;
-                                    border-radius: 12px;
-                                    font-size: 0.8em;
-                                ">مغلقة</span>
-                            ` : ''}
-                        </span>
+                        ">${suggestion.course}</span>
                         <span style="
+                            background: var(--bg-secondary);
+                            padding: 4px 12px;
+                            border-radius: 12px;
                             color: var(--text-color);
-                            white-space: nowrap;
-                        ">يتعارض مع</span>
-                        <span style="
-                            background: ${color2};
-                            padding: 8px 16px;
-                            border-radius: 8px;
-                            color: white;
-                            font-weight: bold;
-                            position: relative;
-                        ">
-                            ${course2.section_course}
-                            ${course2Closed ? `
-                                <span style="
-                                    position: absolute;
-                                    top: -8px;
-                                    right: -8px;
-                                    background: #ff9800;
-                                    color: white;
-                                    padding: 2px 8px;
-                                    border-radius: 12px;
-                                    font-size: 0.8em;
-                                ">مغلقة</span>
-                            ` : ''}
-                        </span>
+                        ">${suggestion.conflictCount} تعارض</span>
                     </div>
-                    <span style="
-                        background: var(--bg-secondary);
-                        padding: 4px 12px;
-                        border-radius: 12px;
-                        font-size: 0.9em;
+                    <div style="
+                        background: ${courseColor}22;
+                        padding: 8px 16px;
+                        border-radius: 8px;
                         color: var(--text-color);
-                        white-space: nowrap;
-                    ">${details.count} تعارض</span>
-                </div>
-                <div class="conflict-details" style="
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                    gap: 15px;
-                    margin-top: 10px;
-                ">
-                    <div class="course-times" style="
-                        background: ${color1}22;
-                        padding: 12px;
-                        border-radius: 8px;
-                        border: 1px solid ${color1}44;
                     ">
-                        <div style="
-                            color: var(--text-color);
-                            margin-bottom: 8px;
-                            font-weight: bold;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                        ">
-                            <span>${course1.section_instructor}</span>
-                            <span style="
-                                font-size: 0.9em;
-                                background: ${color1}33;
-                                padding: 2px 8px;
-                                border-radius: 4px;
-                            ">${course1.section_type}</span>
-                        </div>
-                        ${details.times1.map(time => `
-                            <div style="
-                                background: ${color1}33;
-                                padding: 8px;
-                                margin: 4px 0;
-                                border-radius: 4px;
-                                color: var(--text-color);
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                            ">
-                                <span>${['', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'][time.day]}</span>
-                                <span style="
-                                    background: ${color1}66;
-                                    padding: 2px 8px;
-                                    border-radius: 4px;
-                                    font-size: 0.9em;
-                                ">${formatTimeForDisplay(time.start)} - ${formatTimeForDisplay(time.end)}</span>
-                            </div>
-                        `).join('')}
+                        اقتراح ${index + 1}
                     </div>
-                    <div class="course-times" style="
-                        background: ${color2}22;
-                        padding: 12px;
-                        border-radius: 8px;
-                        border: 1px solid ${color2}44;
+                </div>
+                
+                <div style="
+                    background: ${courseColor}11;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-top: 15px;
+                    border: 1px solid ${courseColor}22;
+                ">
+                    <div style="color: var(--text-color); margin-bottom: 10px;">
+                        حذف هذه المادة سيحل التعارضات مع:
+                    </div>
+                    <div style="
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 8px;
                     ">
-                        <div style="
-                            color: var(--text-color);
-                            margin-bottom: 8px;
-                            font-weight: bold;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                        ">
-                            <span>${course2.section_instructor}</span>
+                        ${suggestion.resolvedCourses.map(course => `
                             <span style="
+                                background: ${generateCourseColor(course)};
+                                padding: 4px 12px;
+                                border-radius: 15px;
+                                color: white;
                                 font-size: 0.9em;
-                                background: ${color2}33;
-                                padding: 2px 8px;
-                                border-radius: 4px;
-                            ">${course2.section_type}</span>
-                        </div>
-                        ${details.times2.map(time => `
-                            <div style="
-                                background: ${color2}33;
-                                padding: 8px;
-                                margin: 4px 0;
-                                border-radius: 4px;
-                                color: var(--text-color);
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                            ">
-                                <span>${['', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'][time.day]}</span>
-                                <span style="
-                                    background: ${color2}66;
-                                    padding: 2px 8px;
-                                    border-radius: 4px;
-                                    font-size: 0.9em;
-                                ">${formatTimeForDisplay(time.start)} - ${formatTimeForDisplay(time.end)}</span>
-                            </div>
+                            ">${course}</span>
                         `).join('')}
                     </div>
                 </div>
