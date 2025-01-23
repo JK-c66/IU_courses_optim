@@ -545,12 +545,12 @@ async function generateSchedule() {
     }
 
     try {
-        // Initial validation - 10%
-        updateLoadingProgress('جاري التحقق من المواد المختارة...', 10);
-        await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for visual feedback
+        // Initial setup - 5%
+        updateLoadingProgress('جاري التحقق من صحة البيانات...', 5);
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-        // Get valid sections - 30%
-        updateLoadingProgress('جاري تحليل الشعب المتاحة...', 30);
+        // Get valid sections - 15%
+        updateLoadingProgress('جاري تحليل الشعب المتاحة والمغلقة...', 15);
         const validSections = coursesData.filter(section => {
             if (!includeClosedSections && section.section_availability === 'مغلقة') {
                 return false;
@@ -567,10 +567,10 @@ async function generateSchedule() {
             }
             return true;
         });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-        // Group sections - 50%
-        updateLoadingProgress('جاري تجميع الشعب...', 50);
+        // Group sections - 25%
+        updateLoadingProgress('جاري تجميع المحاضرات والمعامل...', 25);
         const courseGroups = {};
         for (const section of validSections) {
             if (!courseGroups[section.section_course]) {
@@ -585,21 +585,25 @@ async function generateSchedule() {
                 courseGroups[section.section_course].lectures.push(section);
             }
         }
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Generate combinations - 70%
-        updateLoadingProgress('جاري إنشاء الجداول الممكنة...', 70);
-        const combinations = generateCombinations(courseGroups);
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Find best schedule - 90%
-        updateLoadingProgress('جاري تحديد أفضل الجداول...', 90);
-        currentResult = findBestSchedule(combinations, optimizationType);
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Render results - 100%
-        updateLoadingProgress('جاري عرض النتائج...', 100);
         await new Promise(resolve => setTimeout(resolve, 300));
+
+        // This is the most intensive part - 60%
+        updateLoadingProgress('جاري إنشاء كل الجداول الممكنة وفحص التعارضات...', 60);
+        const combinations = generateCombinations(courseGroups);
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Optimization - 85%
+        updateLoadingProgress('جاري تحديد أفضل الجداول حسب تفضيلاتك...', 85);
+        currentResult = findBestSchedule(combinations, optimizationType);
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Final preparation - 95%
+        updateLoadingProgress('جاري تجهيز النتائج النهائية...', 95);
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Show final results - 100%
+        updateLoadingProgress('اكتمل!', 100);
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         // Show final results
         currentScheduleIndex = 0;
@@ -607,21 +611,27 @@ async function generateSchedule() {
 
     } catch (error) {
         console.error('Error generating schedule:', error);
-        scheduleResultEl.innerHTML = `
-            <div style="
-                background: var(--bg-secondary);
-                border-radius: 12px;
-                padding: 20px;
-                margin: 20px auto;
-                text-align: center;
-                max-width: 600px;
-                color: var(--text-color);
-                border: 1px solid var(--border-color);
-            ">
-                <div style="color: #ff4444; margin-bottom: 10px;">⚠️ حدث خطأ أثناء إنشاء الجدول</div>
-                <div>يرجى المحاولة مرة أخرى أو تحديث الصفحة</div>
-            </div>
-        `;
+        // Only show generic error for actual errors, not for "no schedules possible" case
+        if (!currentResult || !currentResult.message) {
+            scheduleResultEl.innerHTML = `
+                <div style="
+                    background: var(--bg-secondary);
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin: 20px auto;
+                    text-align: center;
+                    max-width: 600px;
+                    color: var(--text-color);
+                    border: 1px solid var(--border-color);
+                ">
+                    <div style="color: #ff4444; margin-bottom: 10px;">⚠️ حدث خطأ أثناء إنشاء الجدول</div>
+                    <div>يرجى المحاولة مرة أخرى أو تحديث الصفحة</div>
+                </div>
+            `;
+        } else {
+            // If we have a result with a message, show it using the normal render function
+            renderScheduleWithOptions(currentResult);
+        }
     }
 }
 
@@ -924,6 +934,90 @@ function findSchedulesWithThursdayOff(combinations) {
         return true;
     }).slice(0, SCHEDULE_LIMIT);
 
+    // If no schedules found with Thursday off, analyze which courses could be removed
+    if (thursdayOffSchedules.length === 0) {
+        // Find all courses that have Thursday classes
+        const coursesWithThursday = new Map(); // course -> sections with Thursday
+        
+        // Get all selected courses' sections
+        const selectedSections = coursesData.filter(section => 
+            selectedCourses.has(section.section_course)
+        );
+        
+        // Identify courses with Thursday classes
+        selectedSections.forEach(section => {
+            const slots = parseTimeSlots(section.section_times);
+            if (slots.some(slot => slot.day === 5)) {
+                if (!coursesWithThursday.has(section.section_course)) {
+                    coursesWithThursday.set(section.section_course, []);
+                }
+                coursesWithThursday.get(section.section_course).push(section);
+            }
+        });
+        
+        // If no courses have Thursday classes (but still no valid schedule), it means
+        // there are other constraints preventing a valid schedule
+        if (coursesWithThursday.size === 0) {
+            return {
+                schedules: [],
+                message: 'لا يمكن إنشاء جدول مع يوم الخميس فارغ حتى مع حذف أي مادة. يرجى اختيار مواد مختلفة.',
+                showConflicts: false
+            };
+        }
+
+        // For each course with Thursday classes, check if removing it alone would enable a Thursday-free schedule
+        const removableCourses = [];
+        coursesWithThursday.forEach((sections, course) => {
+            // Create a new set of selected courses without this one
+            const remainingCourses = new Set(selectedCourses);
+            remainingCourses.delete(course);
+            
+            // Get sections for remaining courses
+            const remainingSections = coursesData.filter(section => 
+                remainingCourses.has(section.section_course)
+            );
+            
+            // Check if all remaining sections avoid Thursday
+            const allAvoidThursday = remainingSections.every(section => {
+                const slots = parseTimeSlots(section.section_times);
+                return !slots.some(slot => slot.day === 5);
+            });
+            
+            if (allAvoidThursday) {
+                removableCourses.push(course);
+            }
+        });
+
+        // Generate appropriate message based on findings
+        if (removableCourses.length > 0) {
+            const coursesList = removableCourses.map(course => 
+                `<span style="
+                    background: ${generateCourseColor(course)};
+                    color: white;
+                    padding: 4px 12px;
+                    border-radius: 15px;
+                    margin: 0 4px;
+                    display: inline-block;
+                ">${course}</span>`
+            ).join(' أو ');
+            
+            return {
+                schedules: [],
+                message: `<div style="text-align: right; direction: rtl;">
+                    يمكنك الحصول على جدول مع يوم الخميس فارغ عن طريق حذف إحدى المواد التالية:<br><br>
+                    ${coursesList}
+                </div>`,
+                showConflicts: false
+            };
+        } else {
+            return {
+                schedules: [],
+                message: 'لا يمكن إنشاء جدول مع يوم الخميس فارغ حتى مع حذف أي مادة. يرجى اختيار مواد مختلفة.',
+                showConflicts: false
+            };
+        }
+    }
+
     const totalThursdayOff = combinations.filter(schedule => {
         return !schedule.some(section => 
             parseTimeSlots(section.section_times).some(slot => slot.day === 5)
@@ -932,7 +1026,8 @@ function findSchedulesWithThursdayOff(combinations) {
 
     return {
         schedules: thursdayOffSchedules,
-        message: `<span dir="rtl">تم العثور على ${totalThursdayOff > SCHEDULE_LIMIT ? SCHEDULE_LIMIT + ' من أصل ' + totalThursdayOff : totalThursdayOff} جدول دراسي مع يوم الخميس فارغ</span>`
+        message: `<span dir="rtl">تم العثور على ${totalThursdayOff > SCHEDULE_LIMIT ? SCHEDULE_LIMIT + ' من أصل ' + totalThursdayOff : totalThursdayOff} جدول دراسي مع يوم الخميس فارغ</span>`,
+        showConflicts: false
     };
 }
 
@@ -1584,7 +1679,7 @@ function groupCoursesByType(sections) {
 // Update renderScheduleWithOptions to show removal impact analysis
 function renderScheduleWithOptions(result) {
     console.log('Rendering schedule options:', result);
-    const { schedules, message } = result;
+    const { schedules, message, showConflicts } = result;
     
     // Generate removal impact analysis if we have selected courses and valid schedules
     let removalAnalysisHTML = '';
@@ -1772,7 +1867,7 @@ function renderScheduleWithOptions(result) {
                 <span>${message}</span>
             </div>
         </div>
-        ${schedules.length === 0 ? generateConflictExplanation() : `
+        ${schedules.length === 0 ? (showConflicts ? generateConflictExplanation() : '') : `
             ${removalAnalysisHTML}
             <div class="room-toggle" style="margin: 15px 0; text-align: right;">
                 <button id="toggleRoomBtn" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
