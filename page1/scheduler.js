@@ -7,6 +7,9 @@ let currentResult = null; // Store current schedule result
 let courseColors = new Map();
 let includeClosedSections = true; // Changed to true by default
 
+// Add schedule limit constant
+const SCHEDULE_LIMIT = 10;
+
 // Add new conflict tracking functionality
 let scheduleConflicts = [];
 
@@ -817,22 +820,28 @@ function findBestSchedule(combinations, optimizationType) {
         };
     }
     
+    let result;
     switch (optimizationType) {
         case 'max-days-off':
-            return findSchedulesWithMostDaysOff(combinations);
+            result = findSchedulesWithMostDaysOff(combinations);
+            break;
         case 'thursday-off':
-            return findSchedulesWithThursdayOff(combinations);
+            result = findSchedulesWithThursdayOff(combinations);
+            break;
         case 'specific-doctors':
-            return {
-                schedules: combinations,
-                message: `تم العثور على ${combinations.length} جدول دراسي`
+            result = {
+                schedules: combinations.slice(0, SCHEDULE_LIMIT),
+                message: `تم العثور على ${combinations.length > SCHEDULE_LIMIT ? SCHEDULE_LIMIT + ' من أصل ' + combinations.length : combinations.length} جدول دراسي`
             };
+            break;
         default:
-            return {
+            result = {
                 schedules: [combinations[0]],
                 message: 'تم العثور على جدول دراسي واحد'
             };
     }
+    
+    return result;
 }
 
 // Helper function to get the correct Arabic form for "day"
@@ -857,7 +866,6 @@ function findSchedulesWithMostDaysOff(combinations) {
 
         for (const section of schedule) {
             const slots = parseTimeSlots(section.section_times);
-            // Check if time parsing failed
             if (slots.length === 0) {
                 console.error('Invalid time format found:', section.section_times);
                 hasInvalidTimes = true;
@@ -866,12 +874,10 @@ function findSchedulesWithMostDaysOff(combinations) {
             slots.forEach(slot => usedDays.add(slot.day));
         }
 
-        // Skip schedules with invalid times
         if (hasInvalidTimes) continue;
         
         const daysOff = 5 - usedDays.size;
         
-        // Validate the days off calculation
         if (daysOff < 0 || daysOff > 5) {
             console.error('Invalid days off calculation:', daysOff, 'for schedule:', schedule);
             continue;
@@ -880,12 +886,11 @@ function findSchedulesWithMostDaysOff(combinations) {
         if (daysOff > maxDaysOff) {
             maxDaysOff = daysOff;
             bestSchedules = [schedule];
-        } else if (daysOff === maxDaysOff) {
+        } else if (daysOff === maxDaysOff && bestSchedules.length < SCHEDULE_LIMIT) {
             bestSchedules.push(schedule);
         }
     }
     
-    // Only return schedules if we found valid ones
     if (bestSchedules.length === 0) {
         return {
             schedules: [],
@@ -893,9 +898,17 @@ function findSchedulesWithMostDaysOff(combinations) {
         };
     }
     
+    const totalFound = combinations.filter(schedule => {
+        const usedDays = new Set();
+        schedule.forEach(section => {
+            parseTimeSlots(section.section_times).forEach(slot => usedDays.add(slot.day));
+        });
+        return (5 - usedDays.size) === maxDaysOff;
+    }).length;
+    
     return {
-        schedules: bestSchedules,
-        message: `<span dir="rtl">تم العثور على \u200E${bestSchedules.length}\u200F جدول دراسي مع \u200E${maxDaysOff}\u200F ${getArabicDayForm(maxDaysOff)}</span>`
+        schedules: bestSchedules.slice(0, SCHEDULE_LIMIT),
+        message: `<span dir="rtl">تم العثور على ${totalFound > SCHEDULE_LIMIT ? SCHEDULE_LIMIT + ' من أصل ' + totalFound : totalFound} جدول دراسي مع ${maxDaysOff} ${getArabicDayForm(maxDaysOff)}</span>`
     };
 }
 
@@ -909,11 +922,17 @@ function findSchedulesWithThursdayOff(combinations) {
             }
         }
         return true;
-    });
+    }).slice(0, SCHEDULE_LIMIT);
+
+    const totalThursdayOff = combinations.filter(schedule => {
+        return !schedule.some(section => 
+            parseTimeSlots(section.section_times).some(slot => slot.day === 5)
+        );
+    }).length;
 
     return {
         schedules: thursdayOffSchedules,
-        message: `<span dir="rtl">تم العثور على \u200E${thursdayOffSchedules.length}\u200F جدول دراسي مع يوم الخميس فارغ</span>`
+        message: `<span dir="rtl">تم العثور على ${totalThursdayOff > SCHEDULE_LIMIT ? SCHEDULE_LIMIT + ' من أصل ' + totalThursdayOff : totalThursdayOff} جدول دراسي مع يوم الخميس فارغ</span>`
     };
 }
 
@@ -1514,18 +1533,31 @@ function calculateDaysOff(schedule) {
 function findFreedDays(currentSchedule, newSchedule) {
     const currentDays = new Set();
     const newDays = new Set();
+    const removedCourseDays = new Set();
     
+    // First find which course was removed by comparing the schedules
+    const currentCourses = new Set(currentSchedule.map(section => section.section_course));
+    const newCourses = new Set(newSchedule.map(section => section.section_course));
+    const removedCourse = Array.from(currentCourses).find(course => !newCourses.has(course));
+    
+    // Get the days used by the removed course
     currentSchedule.forEach(section => {
-        const slots = parseTimeSlots(section.section_times);
-        slots.forEach(slot => currentDays.add(slot.day));
+        if (section.section_course === removedCourse) {
+            const slots = parseTimeSlots(section.section_times);
+            slots.forEach(slot => removedCourseDays.add(slot.day));
+        }
     });
     
+    // Get days used in the new schedule
     newSchedule.forEach(section => {
         const slots = parseTimeSlots(section.section_times);
         slots.forEach(slot => newDays.add(slot.day));
     });
     
-    return Array.from(currentDays)
+    // A day is freed only if:
+    // 1. It was used by the removed course
+    // 2. It's not used by any other course in the new schedule
+    return Array.from(removedCourseDays)
         .filter(day => !newDays.has(day))
         .sort();
 }
@@ -1578,7 +1610,7 @@ function renderScheduleWithOptions(result) {
                     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
                     gap: 15px;
                 ">
-                    ${removalImpact.filter(impact => impact.daysGained > 0).map(impact => {
+                    ${removalImpact.filter(impact => impact.daysGained > 0 && impact.freedDays.length > 0).map(impact => {
                         const courseColor = generateCourseColor(impact.course);
                         const daysMap = {
                             1: 'الأحد',
