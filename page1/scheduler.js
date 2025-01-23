@@ -1669,6 +1669,23 @@ function renderScheduleWithOptions(result) {
                                                 ">${daysMap[day]}</span>
                                             `).join('')}
                                         </div>
+                                        <button onclick="showScheduleWithoutCourse('${impact.course}')" style="
+                                            width: 100%;
+                                            margin-top: 15px;
+                                            padding: 10px;
+                                            background: ${courseColor};
+                                            color: white;
+                                            border: none;
+                                            border-radius: 8px;
+                                            cursor: pointer;
+                                            font-size: 0.9em;
+                                            transition: all 0.2s ease;
+                                        "
+                                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+                                        >
+                                            عرض الجدول بدون هذه المادة
+                                        </button>
                                     </div>
                                 ` : `
                                     <div style="
@@ -2055,3 +2072,53 @@ styleSheet.textContent = `
     }
 `;
 document.head.appendChild(styleSheet); 
+
+// Add the showScheduleWithoutCourse function
+function showScheduleWithoutCourse(courseToRemove) {
+    // Store the original state
+    const originalCourses = new Set(selectedCourses);
+    const originalScheduleIndex = currentScheduleIndex;
+    const originalResult = currentResult;
+
+    // Remove the course temporarily
+    selectedCourses.delete(courseToRemove);
+
+    // Generate new schedule
+    generateSchedule().then(() => {
+        // Add a "Return to Original Schedule" button at the top of the schedule
+        const scheduleHeader = document.querySelector('.schedule-header');
+        if (scheduleHeader) {
+            const returnButton = document.createElement('div');
+            returnButton.style.cssText = `
+                margin-top: 15px;
+                text-align: center;
+            `;
+            returnButton.innerHTML = `
+                <button onclick="restoreOriginalSchedule('${courseToRemove}')" style="
+                    padding: 10px 20px;
+                    background: var(--accent-color);
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 1em;
+                    transition: all 0.2s ease;
+                "
+                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)'"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+                >
+                    العودة إلى الجدول الأصلي
+                </button>
+            `;
+            scheduleHeader.appendChild(returnButton);
+        }
+    });
+}
+
+function restoreOriginalSchedule(removedCourse) {
+    // Add the course back
+    selectedCourses.add(removedCourse);
+    
+    // Regenerate the original schedule
+    generateSchedule();
+}
