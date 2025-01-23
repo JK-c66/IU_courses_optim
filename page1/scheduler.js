@@ -965,12 +965,11 @@ function findSchedulesWithThursdayOff(combinations) {
             };
         }
 
-        // For each course with Thursday classes, check if removing it alone would enable a Thursday-free schedule
-        const removableCourses = [];
-        coursesWithThursday.forEach((sections, course) => {
-            // Create a new set of selected courses without this one
+        // Helper function to check if a set of courses can be removed to get Thursday off
+        function checkCourseCombination(coursesToRemove) {
+            // Create a new set of selected courses without these ones
             const remainingCourses = new Set(selectedCourses);
-            remainingCourses.delete(course);
+            coursesToRemove.forEach(course => remainingCourses.delete(course));
             
             // Get sections for remaining courses
             const remainingSections = coursesData.filter(section => 
@@ -978,41 +977,85 @@ function findSchedulesWithThursdayOff(combinations) {
             );
             
             // Check if all remaining sections avoid Thursday
-            const allAvoidThursday = remainingSections.every(section => {
+            return remainingSections.every(section => {
                 const slots = parseTimeSlots(section.section_times);
                 return !slots.some(slot => slot.day === 5);
             });
+        }
+
+        // Function to generate combinations of courses
+        function generateCombinations(courses, size) {
+            if (size === 1) return courses.map(course => [course]);
             
-            if (allAvoidThursday) {
-                removableCourses.push(course);
+            const combinations = [];
+            for (let i = 0; i <= courses.length - size; i++) {
+                const firstCourse = courses[i];
+                const subCombinations = generateCombinations(
+                    courses.slice(i + 1),
+                    size - 1
+                );
+                subCombinations.forEach(subComb => {
+                    combinations.push([firstCourse, ...subComb]);
+                });
             }
-        });
+            return combinations;
+        }
+
+        // Try combinations of increasing size (up to 3 courses)
+        const coursesArray = Array.from(coursesWithThursday.keys());
+        const validCombinations = [];
+        
+        for (let size = 1; size <= Math.min(3, coursesArray.length); size++) {
+            const combinations = generateCombinations(coursesArray, size);
+            for (const combination of combinations) {
+                if (checkCourseCombination(combination)) {
+                    validCombinations.push(combination);
+                }
+            }
+            // If we found valid combinations at this size, no need to check larger sizes
+            if (validCombinations.length > 0) break;
+        }
 
         // Generate appropriate message based on findings
-        if (removableCourses.length > 0) {
-            const coursesList = removableCourses.map(course => 
-                `<span style="
-                    background: ${generateCourseColor(course)};
-                    color: white;
-                    padding: 4px 12px;
-                    border-radius: 15px;
-                    margin: 0 4px;
-                    display: inline-block;
-                ">${course}</span>`
-            ).join(' أو ');
+        if (validCombinations.length > 0) {
+            // Sort combinations by size
+            validCombinations.sort((a, b) => a.length - b.length);
+            const minSize = validCombinations[0].length;
+            
+            // Group combinations by size
+            const combinationsBySize = validCombinations
+                .filter(combo => combo.length === minSize) // Only show minimum size combinations
+                .map(courses => 
+                    courses.map(course => 
+                        `<span style="
+                            background: ${generateCourseColor(course)};
+                            color: white;
+                            padding: 4px 12px;
+                            border-radius: 15px;
+                            margin: 0 4px;
+                            display: inline-block;
+                        ">${course}</span>`
+                    ).join(' + ')
+                );
+            
+            const courseCountText = minSize === 1 ? 'مادة واحدة' : 
+                                 minSize === 2 ? 'مادتين' : 
+                                 `${minSize} مواد`;
             
             return {
                 schedules: [],
                 message: `<div style="text-align: right; direction: rtl;">
-                    يمكنك الحصول على جدول مع يوم الخميس فارغ عن طريق حذف إحدى المواد التالية:<br><br>
-                    ${coursesList}
+                    يمكنك الحصول على جدول مع يوم الخميس فارغ عن طريق حذف ${courseCountText}:<br><br>
+                    ${combinationsBySize.map(combo => 
+                        `<div style="margin: 10px 0;">${combo}</div>`
+                    ).join('<div style="text-align: center; margin: 10px 0; color: var(--text-color);">أو</div>')}
                 </div>`,
                 showConflicts: false
             };
         } else {
             return {
                 schedules: [],
-                message: 'لا يمكن إنشاء جدول مع يوم الخميس فارغ حتى مع حذف أي مادة. يرجى اختيار مواد مختلفة.',
+                message: 'لا يمكن إنشاء جدول مع يوم الخميس فارغ حتى مع حذف عدة مواد. يرجى اختيار مواد مختلفة.',
                 showConflicts: false
             };
         }
