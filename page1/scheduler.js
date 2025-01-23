@@ -447,15 +447,93 @@ function showDoctorPreferences() {
     });
 }
 
-// Generate the optimized schedule
-function generateSchedule() {
+// Add loading indicator functions
+function showLoadingIndicator() {
+    const loadingHTML = `
+        <div id="loadingContainer" style="
+            position: relative;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px auto;
+            text-align: center;
+            max-width: 600px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        ">
+            <div class="spinner" style="
+                width: 50px;
+                height: 50px;
+                border: 5px solid var(--border-color);
+                border-top: 5px solid var(--accent-color);
+                border-radius: 50%;
+                margin: 0 auto 20px;
+                animation: spin 1s linear infinite;
+            "></div>
+            
+            <div id="loadingStage" style="
+                color: var(--text-color);
+                margin-bottom: 15px;
+                font-size: 1.1em;
+                font-weight: 500;
+            ">جاري تحليل المواد المختارة...</div>
+            
+            <div class="progress-container" style="
+                background: var(--bg-color);
+                border-radius: 10px;
+                height: 10px;
+                overflow: hidden;
+                margin: 15px 0;
+                border: 1px solid var(--border-color);
+            ">
+                <div id="progressBar" style="
+                    width: 0%;
+                    height: 100%;
+                    background: var(--accent-color);
+                    transition: width 0.3s ease;
+                "></div>
+            </div>
+            
+            <div id="progressText" style="
+                color: var(--text-color);
+                font-size: 0.9em;
+                opacity: 0.8;
+            ">0%</div>
+        </div>
+        
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+    
+    scheduleResultEl.innerHTML = loadingHTML;
+}
+
+function updateLoadingProgress(stage, progress) {
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const loadingStage = document.getElementById('loadingStage');
+    
+    if (progressBar && progressText && loadingStage) {
+        progressBar.style.width = `${progress}%`;
+        progressText.textContent = `${Math.round(progress)}%`;
+        loadingStage.textContent = stage;
+    }
+}
+
+// Update generateSchedule function to include loading states
+async function generateSchedule() {
     if (selectedCourses.size === 0) {
         alert('Please select at least one course');
         return;
     }
 
-    // Reset conflicts array at the start of new schedule generation
+    // Reset conflicts array and show loading indicator
     scheduleConflicts = [];
+    showLoadingIndicator();
 
     const optimizationType = document.querySelector('input[name="optimization-preference"]:checked')?.value;
     if (!optimizationType) {
@@ -463,61 +541,85 @@ function generateSchedule() {
         return;
     }
 
-    console.log('Selected courses:', Array.from(selectedCourses));
-    console.log('Selected doctors:', Object.fromEntries(selectedDoctors));
-    console.log('Optimization type:', optimizationType);
-    console.log('Include closed sections:', includeClosedSections);
+    try {
+        // Initial validation - 10%
+        updateLoadingProgress('جاري التحقق من المواد المختارة...', 10);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for visual feedback
 
-    // Get all valid sections for selected courses
-    const validSections = coursesData.filter(section => {
-        // First check if section is open or if we're including closed sections
-        if (!includeClosedSections && section.section_availability === 'مغلقة') {
-            return false;
-        }
-        
-        if (!selectedCourses.has(section.section_course)) return false;
-        if (selectedDoctors.has(section.section_course)) {
-            const prefs = selectedDoctors.get(section.section_course);
-            if (section.section_type === 'عملي' && prefs.lab) {
-                return section.section_instructor === prefs.lab;
-            } else if (section.section_type !== 'عملي' && prefs.lecture) {
-                return section.section_instructor === prefs.lecture;
+        // Get valid sections - 30%
+        updateLoadingProgress('جاري تحليل الشعب المتاحة...', 30);
+        const validSections = coursesData.filter(section => {
+            if (!includeClosedSections && section.section_availability === 'مغلقة') {
+                return false;
+            }
+            
+            if (!selectedCourses.has(section.section_course)) return false;
+            if (selectedDoctors.has(section.section_course)) {
+                const prefs = selectedDoctors.get(section.section_course);
+                if (section.section_type === 'عملي' && prefs.lab) {
+                    return section.section_instructor === prefs.lab;
+                } else if (section.section_type !== 'عملي' && prefs.lecture) {
+                    return section.section_instructor === prefs.lecture;
+                }
+            }
+            return true;
+        });
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Group sections - 50%
+        updateLoadingProgress('جاري تجميع الشعب...', 50);
+        const courseGroups = {};
+        for (const section of validSections) {
+            if (!courseGroups[section.section_course]) {
+                courseGroups[section.section_course] = {
+                    lectures: [],
+                    labs: []
+                };
+            }
+            if (section.section_type === 'عملي') {
+                courseGroups[section.section_course].labs.push(section);
+            } else {
+                courseGroups[section.section_course].lectures.push(section);
             }
         }
-        return true;
-    });
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-    console.log('Valid sections count:', validSections.length);
+        // Generate combinations - 70%
+        updateLoadingProgress('جاري إنشاء الجداول الممكنة...', 70);
+        const combinations = generateCombinations(courseGroups);
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Group sections by course and type
-    const courseGroups = {};
-    for (const section of validSections) {
-        if (!courseGroups[section.section_course]) {
-            courseGroups[section.section_course] = {
-                lectures: [],
-                labs: []
-            };
-        }
-        if (section.section_type === 'عملي') {
-            courseGroups[section.section_course].labs.push(section);
-        } else {
-            courseGroups[section.section_course].lectures.push(section);
-        }
+        // Find best schedule - 90%
+        updateLoadingProgress('جاري تحديد أفضل الجداول...', 90);
+        currentResult = findBestSchedule(combinations, optimizationType);
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Render results - 100%
+        updateLoadingProgress('جاري عرض النتائج...', 100);
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Show final results
+        currentScheduleIndex = 0;
+        renderScheduleWithOptions(currentResult);
+
+    } catch (error) {
+        console.error('Error generating schedule:', error);
+        scheduleResultEl.innerHTML = `
+            <div style="
+                background: var(--bg-secondary);
+                border-radius: 12px;
+                padding: 20px;
+                margin: 20px auto;
+                text-align: center;
+                max-width: 600px;
+                color: var(--text-color);
+                border: 1px solid var(--border-color);
+            ">
+                <div style="color: #ff4444; margin-bottom: 10px;">⚠️ حدث خطأ أثناء إنشاء الجدول</div>
+                <div>يرجى المحاولة مرة أخرى أو تحديث الصفحة</div>
+            </div>
+        `;
     }
-
-    console.log('Course groups:', courseGroups);
-
-    // Generate all possible combinations
-    const combinations = generateCombinations(courseGroups);
-    console.log('Generated combinations count:', combinations.length);
-    
-    // Find the best combinations based on optimization type
-    currentResult = findBestSchedule(combinations, optimizationType);
-    console.log('Best schedule result:', currentResult);
-    
-    // Render the results without alert
-    currentScheduleIndex = 0;
-    renderScheduleWithOptions(currentResult);
 }
 
 // Helper function to parse time slots from the time string
