@@ -215,7 +215,7 @@
             await navigator.clipboard.writeText(string);
             optimizeBtn.textContent = 'تم النسخ!';
             optimizeBtn.classList.add('success-animation');
-            window.open('https://jk-c66.github.io/IU_courses_optim/index.html', '_blank');
+            window.open('https://JKc66.github.io/IU_courses_optim/index.html', '_blank');
             setTimeout(() => {
                 optimizeBtn.textContent = 'فتح الموقع';
                 optimizeBtn.classList.remove('success-animation');
